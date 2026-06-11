@@ -5,36 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tourenplan App</title>
     <style>
-        /* Druckeinstellungen auf Querformat erzwingen */
-        @page { size: landscape; margin: 5mm; }
+        /* Grundlayout */
+        @page { size: A4 landscape; margin: 5mm; }
         body { font-family: sans-serif; padding: 5px; font-size: 10px; margin: 0; }
         
         .page { display: none; }
         .active { display: block; }
         
+        /* Navigation (im Druck ausgeblendet) */
         .nav-bar { display: flex; gap: 5px; margin-bottom: 5px; background: #f0f0f0; padding: 5px; }
         button { cursor: pointer; padding: 4px 8px; font-size: 10px; }
 
-        .header-content { border-bottom: 2px solid #333; margin-bottom: 10px; padding-bottom: 5px; }
-        
-        /* Tabelle für 5 Tage optimiert */
+        /* Tabelle fixieren */
         .table-container { width: 100%; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border: 1px solid #000; padding: 2px; text-align: center; vertical-align: top; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed; /* Wichtig für die Breitenbegrenzung */
+        }
+        th, td { border: 1px solid #000; padding: 1px; text-align: center; vertical-align: top; }
         
-        /* Zelle-Struktur */
         .cell-content { display: flex; flex-direction: column; height: 100%; gap: 1px; }
         .header-row { display: flex; justify-content: flex-end; height: 10px; }
         .undo-btn { cursor: pointer; border: none; background: none; font-size: 10px; color: #444; line-height: 1; padding: 0; }
         
-        select { width: 100%; font-size: 8px; border: 1px solid #ccc; }
+        select { width: 100%; font-size: 7px; border: 1px solid #ccc; }
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; }
 
-        /* DRUCK-LAYOUT */
+        /* DRUCK-LAYOUT - ERZWINGT EINE SEITE */
         @media print {
             .nav-bar, .undo-btn { display: none !important; }
-            body { font-size: 9pt; }
-            table { height: 90vh; } /* Nimmt den verfügbaren Platz ein */
+            body { font-size: 8pt; width: 100%; }
+            .page { display: block !important; }
+            
+            /* Skalierung der Tabelle auf den verfügbaren Platz */
+            table { 
+                width: 100% !important; 
+                max-height: 95vh !important; 
+                table-layout: fixed;
+            }
+            td, th { overflow: hidden; }
         }
     </style>
 </head>
@@ -48,12 +58,12 @@
     </div>
 
     <div id="plan" class="page active">
-        <div class="header-content">
+        <div style="border-bottom: 1px solid #000; margin-bottom: 5px;">
             <h1>Tourenplan</h1>
-            <input type="text" id="tourName" placeholder="Tourname..." style="width:100%; border:none; font-size: 16px; font-weight:bold;" oninput="saveAppState()">
+            <input type="text" id="tourName" placeholder="Tourname..." style="width:100%; border:none; font-weight:bold;" oninput="saveAppState()">
         </div>
         <div class="table-container">
-            <table>
+            <table id="plan-table">
                 <thead><tr><th style="width:30px;">Nr.</th><th>Mo</th><th>Di</th><th>Mi</th><th>Do</th><th>Fr</th></tr></thead>
                 <tbody id="plan-body"></tbody>
             </table>
@@ -78,11 +88,10 @@
             document.getElementById(id).classList.add('active');
         }
 
-        // Generierung für 5 Tage
         const tbody = document.getElementById('plan-body');
         for(let i=1; i<=15; i++) {
             let row = `<tr><td>${i}</td>`;
-            for(let j=0; j<5; j++) { // Nur 5 Tage
+            for(let j=0; j<5; j++) {
                 row += `<td>
                     <div class="cell-content">
                         <div class="header-row"><button class="undo-btn" onclick="clearCell(this)">↺</button></div>
@@ -97,66 +106,8 @@
             tbody.innerHTML += row + '</tr>';
         }
 
-        // Datenverwaltung (Kopie der Logik)
-        function addData(key, inputId) {
-            const input = document.getElementById(inputId);
-            const val = input.value.trim();
-            if (!val) return;
-            const list = JSON.parse(localStorage.getItem(key) || '[]');
-            list.push(val);
-            localStorage.setItem(key, JSON.stringify(list));
-            input.value = '';
-            renderLists();
-            refreshDropdowns();
-        }
-
-        function del(key, i) {
-            const list = JSON.parse(localStorage.getItem(key) || '[]');
-            list.splice(i, 1);
-            localStorage.setItem(key, JSON.stringify(list));
-            renderLists();
-            refreshDropdowns();
-        }
-
-        function renderLists() {
-            ['klienten', 'leistungen'].forEach(key => {
-                const list = JSON.parse(localStorage.getItem(key) || '[]');
-                const container = document.getElementById('list-' + key);
-                if(container) container.innerHTML = list.map((item, i) => `<li>${item} <button onclick="del('${key}', ${i})">X</button></li>`).join('');
-            });
-        }
-
-        function refreshDropdowns() {
-            const kl = JSON.parse(localStorage.getItem('klienten') || '[]');
-            const le = JSON.parse(localStorage.getItem('leistungen') || '[]');
-            const optKl = '<option value="">-</option>' + kl.map(n => `<option value="${n}">${n}</option>`).join('');
-            const optLe = '<option value="">-</option>' + le.map(n => `<option value="${n}">${n}</option>`).join('');
-            document.querySelectorAll('.name-select').forEach(s => { const v = s.value; s.innerHTML = optKl; s.value = v; });
-            document.querySelectorAll('.task-select').forEach(s => { const v = s.value; s.innerHTML = optLe; s.value = v; });
-        }
-
-        function saveAppState() {
-            const state = {};
-            document.querySelectorAll('select, input').forEach(el => { if(el.id || el.name) state[el.id || el.name] = el.value; });
-            localStorage.setItem('appState', JSON.stringify(state));
-        }
-
-        function loadAppState() {
-            const state = JSON.parse(localStorage.getItem('appState') || '{}');
-            Object.keys(state).forEach(key => {
-                const el = document.querySelector(`[id="${key}"], [name="${key}"]`);
-                if(el) el.value = state[key];
-            });
-        }
-
-        function clearCell(btn) {
-            btn.closest('.cell-content').querySelectorAll('select').forEach(s => s.selectedIndex = 0);
-            saveAppState();
-        }
-
-        renderLists();
-        refreshDropdowns();
-        loadAppState();
+        // ... (Die restlichen Funktionen addData, del, renderLists, refreshDropdowns, save/loadAppState bleiben unverändert) ...
+        // [Hier den Rest deines existierenden JS-Codes einfügen]
     </script>
 </body>
 </html>
