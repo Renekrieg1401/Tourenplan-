@@ -5,27 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tourenplan App</title>
     <style>
-        /* Basis */
+        @page { size: landscape; margin: 5mm; }
         body { font-family: sans-serif; padding: 5px; font-size: 10px; margin: 0; }
         .page { display: none; }
         .active { display: block; }
-        
         .nav-bar { display: flex; gap: 5px; margin-bottom: 5px; background: #f0f0f0; padding: 5px; }
         button { cursor: pointer; padding: 4px 8px; font-size: 10px; }
-
-        /* Tabelle */
         .table-container { width: 100%; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { border: 1px solid #000; padding: 2px; text-align: center; vertical-align: top; }
-        
         .cell-content { display: flex; flex-direction: column; height: 100%; gap: 1px; }
         .header-row { display: flex; justify-content: flex-end; height: 10px; }
         .undo-btn { cursor: pointer; border: none; background: none; font-size: 10px; color: #444; line-height: 1; padding: 0; }
-        
         select { width: 100%; font-size: 7px; border: 1px solid #ccc; }
         .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; }
-
-        /* DRUCK-LAYOUT */
+        
         @media print {
             @page { size: landscape; margin: 5mm; }
             .nav-bar, .undo-btn { display: none !important; }
@@ -74,6 +68,71 @@
             document.getElementById(id).classList.add('active');
         }
 
+        // Zentrale Datenverwaltung
+        function addData(key, inputId) {
+            const input = document.getElementById(inputId);
+            const val = input.value.trim();
+            if (!val) return;
+            
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+            data.push(val);
+            localStorage.setItem(key, JSON.stringify(data));
+            
+            input.value = '';
+            updateAll();
+        }
+
+        function del(key, index) {
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+            data.splice(index, 1);
+            localStorage.setItem(key, JSON.stringify(data));
+            updateAll();
+        }
+
+        function updateAll() {
+            renderLists();
+            refreshDropdowns();
+        }
+
+        function renderLists() {
+            ['klienten', 'leistungen'].forEach(key => {
+                const data = JSON.parse(localStorage.getItem(key) || '[]');
+                const container = document.getElementById('list-' + key);
+                container.innerHTML = data.map((item, i) => 
+                    `<li>${item} <button onclick="del('${key}', ${i})">X</button></li>`).join('');
+            });
+        }
+
+        function refreshDropdowns() {
+            const kl = JSON.parse(localStorage.getItem('klienten') || '[]');
+            const le = JSON.parse(localStorage.getItem('leistungen') || '[]');
+            const optKl = '<option value="">-</option>' + kl.map(n => `<option value="${n}">${n}</option>`).join('');
+            const optLe = '<option value="">-</option>' + le.map(n => `<option value="${n}">${n}</option>`).join('');
+            
+            document.querySelectorAll('.name-select').forEach(s => { const v = s.value; s.innerHTML = optKl; s.value = v; });
+            document.querySelectorAll('.task-select').forEach(s => { const v = s.value; s.innerHTML = optLe; s.value = v; });
+        }
+
+        function saveAppState() {
+            const state = {};
+            document.querySelectorAll('select, input').forEach(el => { if (el.id || el.name) state[el.id || el.name] = el.value; });
+            localStorage.setItem('appState', JSON.stringify(state));
+        }
+
+        function loadAppState() {
+            const state = JSON.parse(localStorage.getItem('appState') || '{}');
+            Object.keys(state).forEach(key => {
+                const el = document.querySelector(`[id="${key}"], [name="${key}"]`);
+                if (el) el.value = state[key];
+            });
+        }
+
+        function clearCell(btn) {
+            btn.closest('.cell-content').querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+            saveAppState();
+        }
+
+        // Tabelle aufbauen
         const tbody = document.getElementById('plan-body');
         for(let i=1; i<=15; i++) {
             let row = `<tr><td>${i}</td>`;
@@ -91,9 +150,9 @@
             }
             tbody.innerHTML += row + '</tr>';
         }
-
-        // Restliche Funktionen (addData, del, renderLists, refreshDropdowns, save/loadAppState) analog beibehalten
-        // [Hier den JS-Rest aus dem vorherigen Schritt einfügen]
+        
+        updateAll();
+        loadAppState();
     </script>
 </body>
 </html>
