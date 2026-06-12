@@ -1,159 +1,658 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tourenplan App</title>
-    <style>
-        @page { size: landscape; margin: 5mm; }
-        body { font-family: sans-serif; padding: 5px; font-size: 10px; margin: 0; }
-        .page { display: none; }
-        .active { display: block; }
-        .nav-bar { display: flex; gap: 5px; margin-bottom: 5px; background: #f0f0f0; padding: 5px; }
-        button { cursor: pointer; padding: 4px 8px; font-size: 10px; }
-        .table-container { width: 100%; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border: 1px solid #000; padding: 2px; text-align: center; vertical-align: top; }
-        .cell-content { display: flex; flex-direction: column; height: 100%; gap: 1px; }
-        .header-row { display: flex; justify-content: flex-end; height: 10px; }
-        .undo-btn { cursor: pointer; border: none; background: none; font-size: 10px; color: #444; line-height: 1; padding: 0; }
-        select { width: 100%; font-size: 7px; border: 1px solid #ccc; }
-        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; }
-        
-        @media print {
-            @page { size: landscape; margin: 5mm; }
-            .nav-bar, .undo-btn { display: none !important; }
-            body { font-size: 9pt; }
-            table { border: 1px solid #000; width: 100% !important; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tourenplan – DSGVO-konforme Offline-Verwaltung für Pflegedienste">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Tourenplan</title>
+
+  <style>
+    /* ═══ RESET ═══ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ═══ DESIGN-TOKENS ═══ */
+    :root {
+      --c0: #0F172A;  --c1: #1E3A8A;  --c2: #2563EB;  --c3: #DBEAFE;
+      --bg: #F1F5F9;  --sur: #FFFFFF;
+      --brd: #CBD5E1; --brdl: #E2E8F0;
+      --txt: #0F172A; --txm: #475569;  --txl: #94A3B8;
+      --red: #EF4444;
+      --mo-h: #92400E; --mo-b: #FFFBEB;
+      --di-h: #991B1B; --di-b: #FFF1F2;
+      --mi-h: #065F46; --mi-b: #F0FDF4;
+      --do-h: #1E40AF; --do-b: #EFF6FF;
+      --fr-h: #4C1D95; --fr-b: #FAF5FF;
+      --r: 8px; --rs: 4px;
+      --sh:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --sh2: 0 4px 6px -1px rgba(0,0,0,.10), 0 2px 4px -1px rgba(0,0,0,.06);
+    }
+
+    /* ═══ BASE ═══ */
+    html, body {
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      color: var(--txt);
+      background: var(--bg);
+      line-height: 1.4;
+    }
+
+    /* ═══ NAV ═══ */
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--c0);
+      padding: 8px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-wrap: wrap;
+    }
+    .nav-brand {
+      font-weight: 800;
+      font-size: 13px;
+      color: #fff;
+      margin-right: 6px;
+      white-space: nowrap;
+      letter-spacing: -.3px;
+    }
+    .nav-tab {
+      padding: 5px 12px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: var(--rs);
+      background: transparent;
+      color: rgba(255,255,255,.7);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .nav-tab:hover { background: rgba(255,255,255,.1); color: #fff; }
+    .nav-tab.on   { background: var(--c2); border-color: var(--c2); color: #fff; }
+    .nav-sep      { flex: 1; }
+    .nav-badge {
+      background: rgba(34,197,94,.15);
+      border: 1px solid rgba(34,197,94,.3);
+      color: #86EFAC;
+      border-radius: 20px;
+      padding: 2px 8px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      white-space: nowrap;
+    }
+    .btn-print {
+      padding: 5px 12px;
+      background: var(--c2);
+      color: #fff;
+      border: none;
+      border-radius: var(--rs);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .btn-print:hover { background: #1D4ED8; }
+
+    /* ═══ PAGES ═══ */
+    .pg { display: none; padding: 12px 14px; }
+    .pg.on { display: block; }
+
+    /* ═══ PLAN BAR ═══ */
+    .plan-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--sur);
+      border: 1px solid var(--brd);
+      border-radius: var(--r);
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      box-shadow: var(--sh);
+    }
+    .plan-bar label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--txm);
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .plan-bar input {
+      flex: 1;
+      border: 1px solid var(--brdl);
+      border-radius: var(--rs);
+      padding: 5px 9px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--txt);
+      background: var(--bg);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .plan-bar input:focus {
+      outline: none;
+      border-color: var(--c2);
+      box-shadow: 0 0 0 3px var(--c3);
+    }
+
+    /* ═══ TABLE WRAP ═══ */
+    .tbl-wrap {
+      background: var(--sur);
+      border: 1px solid var(--brd);
+      border-radius: var(--r);
+      overflow: hidden;
+      overflow-x: auto;
+      box-shadow: var(--sh2);
+    }
+
+    /* ═══ TABLE ═══ */
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 700px; }
+    thead th {
+      padding: 7px 4px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #fff;
+    }
+    th.th-nr { background: var(--c0); width: 36px; }
+    th.th-mo { background: var(--mo-h); }
+    th.th-di { background: var(--di-h); }
+    th.th-mi { background: var(--mi-h); }
+    th.th-do { background: var(--do-h); }
+    th.th-fr { background: var(--fr-h); }
+
+    td { border: 1px solid var(--brdl); padding: 3px; vertical-align: top; }
+    td.nr {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--txl);
+      vertical-align: middle;
+      background: #F8FAFC;
+      border-right: 2px solid var(--brd);
+      width: 36px;
+    }
+    td.col-mo { background: var(--mo-b); }
+    td.col-di { background: var(--di-b); }
+    td.col-mi { background: var(--mi-b); }
+    td.col-do { background: var(--do-b); }
+    td.col-fr { background: var(--fr-b); }
+    tbody tr:hover td:not(.nr) { filter: brightness(.97); }
+
+    /* ═══ CELL ═══ */
+    .cell { display: flex; flex-direction: column; gap: 2px; min-height: 48px; }
+    .cell-top { display: flex; justify-content: flex-end; }
+    .btn-clr {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--txl);
+      font-size: 12px;
+      line-height: 1;
+      padding: 0;
+      transition: color .15s;
+    }
+    .btn-clr:hover { color: var(--red); }
+
+    select {
+      width: 100%;
+      font-size: 10px;
+      padding: 2px 4px;
+      border: 1px solid var(--brdl);
+      border-radius: 3px;
+      background: var(--sur);
+      color: var(--txt);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color .1s, box-shadow .1s;
+    }
+    select:focus { outline: none; border-color: var(--c2); box-shadow: 0 0 0 2px var(--c3); }
+    .sel-name { font-weight: 700; }
+    .sel-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+    .sel-task { font-size: 9px; color: var(--txm); }
+
+    /* ═══ DATA PAGES ═══ */
+    .dp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .dp-head h2 { font-size: 17px; font-weight: 800; }
+    .add-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: var(--sur);
+      border: 1px solid var(--brd);
+      border-radius: var(--r);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      box-shadow: var(--sh);
+    }
+    .add-form input {
+      flex: 1;
+      padding: 7px 11px;
+      border: 1px solid var(--brd);
+      border-radius: var(--rs);
+      font-size: 13px;
+      color: var(--txt);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .add-form input:focus { outline: none; border-color: var(--c2); box-shadow: 0 0 0 3px var(--c3); }
+    .btn-add {
+      padding: 7px 16px;
+      background: var(--c2);
+      color: #fff;
+      border: none;
+      border-radius: var(--rs);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .btn-add:hover { background: #1D4ED8; }
+
+    .item-list { background: var(--sur); border: 1px solid var(--brd); border-radius: var(--r); overflow: hidden; box-shadow: var(--sh); }
+    .item-empty { padding: 24px; text-align: center; color: var(--txl); font-size: 13px; }
+    .item-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--brdl);
+      gap: 10px;
+      transition: background .1s;
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-row:hover { background: var(--bg); }
+    .item-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--brd);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: var(--txm); flex-shrink: 0;
+    }
+    .item-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .btn-del {
+      padding: 3px 9px;
+      background: none;
+      color: var(--red);
+      border: 1px solid currentColor;
+      border-radius: var(--rs);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: .65;
+      transition: all .15s;
+    }
+    .btn-del:hover { opacity: 1; background: #FEF2F2; }
+
+    /* ═══ PRINT HEADER (screen: hidden) ═══ */
+    .phdr { display: none; }
+
+    /* ═══ PRINT ═══ */
+    @media print {
+      @page { size: A4 landscape; margin: 5mm 6mm; }
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      html, body { font-size: 7pt; background: #fff; }
+
+      .nav, .plan-bar, .btn-clr, .cell-top { display: none !important; }
+      .pg   { display: none !important; padding: 0; }
+      #plan { display: block !important; padding: 0; }
+
+      .phdr {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 2.5mm;
+        border-bottom: .5pt solid #333;
+        padding-bottom: 1.5mm;
+      }
+      .phdr-name { font-size: 10pt; font-weight: 800; }
+      .phdr-date { font-size: 7pt; color: #555; }
+
+      .tbl-wrap { border: none; box-shadow: none; border-radius: 0; overflow: visible; }
+      table     { min-width: 0; border: .5pt solid #333; }
+      thead th  { font-size: 6.5pt; padding: 1.5mm 1mm; }
+      td        { padding: 1mm 1.5mm; border: .25pt solid #bbb; }
+      td.nr     { border-right: .75pt solid #666; }
+      .cell     { min-height: 0; gap: .5mm; }
+      select    {
+        font-size: 6pt;
+        border: none;
+        background: transparent;
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 0;
+        pointer-events: none;
+      }
+      .sel-name { font-size: 6.5pt; font-weight: 800; }
+      .sel-task { font-size: 5.5pt; }
+      .sel-row  { gap: .5mm; }
+    }
+  </style>
 </head>
 <body>
 
-    <div class="nav-bar">
-        <button onclick="showPage('plan')">Tourenplan</button>
-        <button onclick="showPage('klienten')">Klienten</button>
-        <button onclick="showPage('leistungen')">Leistungen</button>
-        <button onclick="window.print()" style="background: #4a90e2; color: white;">PDF Drucken</button>
+  <!-- ═══ NAVIGATION ═══ -->
+  <nav class="nav">
+    <span class="nav-brand">📋 Tourenplan</span>
+    <button class="nav-tab on"    onclick="nav('plan',       this)">Tourenplan</button>
+    <button class="nav-tab"       onclick="nav('klienten',   this)">Klienten</button>
+    <button class="nav-tab"       onclick="nav('leistungen', this)">Leistungen</button>
+    <span class="nav-sep"></span>
+    <span class="nav-badge">🔒 DSGVO</span>
+    <button class="btn-print" onclick="window.print()">🖨 Drucken</button>
+  </nav>
+
+  <!-- ═══ TOURENPLAN ═══ -->
+  <div id="plan" class="pg on">
+    <!-- Nur im Druck sichtbar -->
+    <div class="phdr">
+      <span class="phdr-name" id="phdr-name">Tourenplan</span>
+      <span class="phdr-date" id="phdr-date"></span>
     </div>
 
-    <div id="plan" class="page active">
-        <div style="border-bottom: 1px solid #000; margin-bottom: 5px;">
-            <h1>Tourenplan</h1>
-            <input type="text" id="tourName" placeholder="Tourname..." style="width:100%; border:none; font-weight:bold;" oninput="saveAppState()">
-        </div>
-        <div class="table-container">
-            <table>
-                <thead><tr><th style="width:30px;">Nr.</th><th>Mo</th><th>Di</th><th>Mi</th><th>Do</th><th>Fr</th></tr></thead>
-                <tbody id="plan-body"></tbody>
-            </table>
-        </div>
+    <div class="plan-bar">
+      <label for="tourName">Tourname</label>
+      <input type="text" id="tourName"
+             placeholder="z.B. Tour Nord – KW 24"
+             autocomplete="off"
+             oninput="tourNameCh(this.value)">
     </div>
 
-    <div id="klienten" class="page">
-        <h1>Klienten</h1>
-        <input type="text" id="kName"><button onclick="addData('klienten', 'kName')">Hinzufügen</button>
-        <ul id="list-klienten"></ul>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="th-nr">#</th>
+            <th class="th-mo">Montag</th>
+            <th class="th-di">Dienstag</th>
+            <th class="th-mi">Mittwoch</th>
+            <th class="th-do">Donnerstag</th>
+            <th class="th-fr">Freitag</th>
+          </tr>
+        </thead>
+        <tbody id="planBody"></tbody>
+      </table>
     </div>
+  </div>
 
-    <div id="leistungen" class="page">
-        <h1>Leistungen</h1>
-        <input type="text" id="lName"><button onclick="addData('leistungen', 'lName')">Hinzufügen</button>
-        <ul id="list-leistungen"></ul>
+  <!-- ═══ KLIENTEN ═══ -->
+  <div id="klienten" class="pg">
+    <div class="dp-head"><h2>👤 Klienten</h2></div>
+    <div class="add-form">
+      <input type="text" id="kName"
+             placeholder="Name des Klienten..."
+             autocomplete="off"
+             onkeydown="if(event.key==='Enter')addItem('klienten','kName')">
+      <button class="btn-add" onclick="addItem('klienten','kName')">+ Hinzufügen</button>
     </div>
+    <div class="item-list" id="listKl"></div>
+  </div>
 
-    <script>
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
+  <!-- ═══ LEISTUNGEN ═══ -->
+  <div id="leistungen" class="pg">
+    <div class="dp-head"><h2>⚕️ Leistungen</h2></div>
+    <div class="add-form">
+      <input type="text" id="lName"
+             placeholder="Bezeichnung der Leistung..."
+             autocomplete="off"
+             onkeydown="if(event.key==='Enter')addItem('leistungen','lName')">
+      <button class="btn-add" onclick="addItem('leistungen','lName')">+ Hinzufügen</button>
+    </div>
+    <div class="item-list" id="listLe"></div>
+  </div>
 
-        // Zentrale Datenverwaltung
-        function addData(key, inputId) {
-            const input = document.getElementById(inputId);
-            const val = input.value.trim();
-            if (!val) return;
-            
-            let data = JSON.parse(localStorage.getItem(key) || '[]');
-            data.push(val);
-            localStorage.setItem(key, JSON.stringify(data));
-            
-            input.value = '';
-            updateAll();
-        }
+  <script>
+    /* ══════════════════════════════════════════════════
+       KONFIGURATION
+    ══════════════════════════════════════════════════ */
+    const APP_VER = '2.1.0';
+    const ROWS    = 15;
+    const KEY_KL  = 'tp_kl';   // Klienten (DSGVO: lokal, kein Upload)
+    const KEY_LE  = 'tp_le';   // Leistungen
+    const KEY_ST  = 'tp_st';   // App-State
+    const DAY_CLS = ['col-mo','col-di','col-mi','col-do','col-fr'];
 
-        function del(key, index) {
-            let data = JSON.parse(localStorage.getItem(key) || '[]');
-            data.splice(index, 1);
-            localStorage.setItem(key, JSON.stringify(data));
-            updateAll();
-        }
+    /* ══════════════════════════════════════════════════
+       SERVICE WORKER – Offline-Cache, Auto-Update
+       DSGVO: Keine Übertragung personenbezogener Daten.
+       Alle Inhalte verbleiben ausschließlich auf dem Gerät.
+    ══════════════════════════════════════════════════ */
+    (function initSW() {
+      if (!('serviceWorker' in navigator)) return;
+      const src = `
+const CN = 'tp-${APP_VER}';
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CN).then(c => c.add(new Request(self.registration.scope, { cache: 'reload' }))).catch(() => {}));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(ks => Promise.all(ks.filter(k => k !== CN).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(cached => cached || fetch(e.request)
+      .then(res => { caches.open(CN).then(c => c.put(e.request, res.clone())); return res; })
+      .catch(() => new Response('', { status: 503 }))
+    )
+  );
+});
+      `;
+      try {
+        const url = URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
+        navigator.serviceWorker.register(url).catch(() => {});
+      } catch (e) {}
+    })();
 
-        function updateAll() {
-            renderLists();
-            refreshDropdowns();
-        }
+    /* ══════════════════════════════════════════════════
+       DATENSCHICHT – Ausschließlich localStorage
+       DSGVO Art. 5: Datensparsamkeit & Integrität
+    ══════════════════════════════════════════════════ */
+    const lsGet = k     => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; } };
+    const lsSet = (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.error('Speicherfehler:', e); } };
+    const stGet = ()    => { try { return JSON.parse(localStorage.getItem(KEY_ST) || '{}'); } catch { return {}; } };
+    const stSet = v     => { try { localStorage.setItem(KEY_ST, JSON.stringify(v)); } catch {} };
 
-        function renderLists() {
-            ['klienten', 'leistungen'].forEach(key => {
-                const data = JSON.parse(localStorage.getItem(key) || '[]');
-                const container = document.getElementById('list-' + key);
-                container.innerHTML = data.map((item, i) => 
-                    `<li>${item} <button onclick="del('${key}', ${i})">X</button></li>`).join('');
-            });
-        }
+    /* Datenmigration: bisherige Schlüsselformate übernehmen */
+    function migrate() {
+      [['klienten', KEY_KL], ['leistungen', KEY_LE], ['appState', KEY_ST]]
+        .forEach(([oldKey, newKey]) => {
+          if (localStorage.getItem(oldKey) && !localStorage.getItem(newKey))
+            localStorage.setItem(newKey, localStorage.getItem(oldKey));
+        });
+    }
 
-        function refreshDropdowns() {
-            const kl = JSON.parse(localStorage.getItem('klienten') || '[]');
-            const le = JSON.parse(localStorage.getItem('leistungen') || '[]');
-            const optKl = '<option value="">-</option>' + kl.map(n => `<option value="${n}">${n}</option>`).join('');
-            const optLe = '<option value="">-</option>' + le.map(n => `<option value="${n}">${n}</option>`).join('');
-            
-            document.querySelectorAll('.name-select').forEach(s => { const v = s.value; s.innerHTML = optKl; s.value = v; });
-            document.querySelectorAll('.task-select').forEach(s => { const v = s.value; s.innerHTML = optLe; s.value = v; });
-        }
+    /* ══════════════════════════════════════════════════
+       STATE – Speichern & Wiederherstellen
+    ══════════════════════════════════════════════════ */
+    function saveState() {
+      const st = {};
+      const tn = document.getElementById('tourName');
+      if (tn) st.tourName = tn.value;
+      document.querySelectorAll('#planBody select[name]').forEach(s => { st[s.name] = s.value; });
+      stSet(st);
+    }
 
-        function saveAppState() {
-            const state = {};
-            document.querySelectorAll('select, input').forEach(el => { if (el.id || el.name) state[el.id || el.name] = el.value; });
-            localStorage.setItem('appState', JSON.stringify(state));
-        }
+    function restoreState() {
+      const st = stGet();
+      const tn = document.getElementById('tourName');
+      if (tn && st.tourName !== undefined) {
+        tn.value = st.tourName;
+        updPhdr(st.tourName);
+      }
+      document.querySelectorAll('#planBody select[name]').forEach(s => {
+        if (st[s.name] !== undefined) s.value = st[s.name];
+      });
+    }
 
-        function loadAppState() {
-            const state = JSON.parse(localStorage.getItem('appState') || '{}');
-            Object.keys(state).forEach(key => {
-                const el = document.querySelector(`[id="${key}"], [name="${key}"]`);
-                if (el) el.value = state[key];
-            });
-        }
+    function tourNameCh(v) { updPhdr(v); saveState(); }
 
-        function clearCell(btn) {
-            btn.closest('.cell-content').querySelectorAll('select').forEach(s => s.selectedIndex = 0);
-            saveAppState();
-        }
+    function updPhdr(name) {
+      const el = document.getElementById('phdr-name');
+      if (el) el.textContent = name || 'Tourenplan';
+      const de = document.getElementById('phdr-date');
+      if (de) de.textContent = new Date().toLocaleDateString('de-DE', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
 
-        // Tabelle aufbauen
-        const tbody = document.getElementById('plan-body');
-        for(let i=1; i<=15; i++) {
-            let row = `<tr><td>${i}</td>`;
-            for(let j=0; j<5; j++) {
-                row += `<td>
-                    <div class="cell-content">
-                        <div class="header-row"><button class="undo-btn" onclick="clearCell(this)">↺</button></div>
-                        <select class="name-select" name="k_${i}_${j}" onchange="saveAppState()"></select>
-                        <div class="grid-container">
-                            <select class="task-select" name="l_${i}_${j}_1" onchange="saveAppState()"></select>
-                            <select class="task-select" name="l_${i}_${j}_2" onchange="saveAppState()"></select>
-                        </div>
-                    </div>
-                </td>`;
-            }
-            tbody.innerHTML += row + '</tr>';
+    /* ══════════════════════════════════════════════════
+       DATENVERWALTUNG – Klienten & Leistungen
+    ══════════════════════════════════════════════════ */
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function getKey(type) { return type === 'klienten' ? KEY_KL : KEY_LE; }
+
+    function addItem(type, inputId) {
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+      const val = inp.value.trim();
+      if (!val) { inp.focus(); return; }
+      const arr = lsGet(getKey(type));
+      if (arr.includes(val)) { alert(`"${val}" ist bereits vorhanden.`); return; }
+      arr.push(val);
+      lsSet(getKey(type), arr);
+      inp.value = '';
+      renderList(type);
+      refreshDD();
+      inp.focus();
+    }
+
+    function delItem(type, idx) {
+      const key = getKey(type);
+      const arr = lsGet(key);
+      if (!arr[idx]) return;
+      if (!confirm(`"${arr[idx]}" wirklich löschen?\nDieser Eintrag wird aus allen Planzellen entfernt.`)) return;
+      arr.splice(idx, 1);
+      lsSet(key, arr);
+      renderList(type);
+      refreshDD();
+      saveState(); // Geleerte Zellen persistieren
+    }
+
+    function renderList(type) {
+      const arr = lsGet(getKey(type));
+      const el  = document.getElementById(type === 'klienten' ? 'listKl' : 'listLe');
+      if (!el) return;
+      el.innerHTML = arr.length
+        ? arr.map((item, i) => `
+            <div class="item-row">
+              <div class="item-num">${i + 1}</div>
+              <span class="item-name">${esc(item)}</span>
+              <button class="btn-del" onclick="delItem('${type}',${i})">Löschen</button>
+            </div>`).join('')
+        : '<div class="item-empty">Noch keine Einträge vorhanden.</div>';
+    }
+
+    /* ══════════════════════════════════════════════════
+       DROPDOWNS – Options aufbauen & aktualisieren
+    ══════════════════════════════════════════════════ */
+    function buildOpts(arr) {
+      return '<option value="">—</option>' +
+        arr.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    }
+
+    function refreshDD() {
+      const okl = buildOpts(lsGet(KEY_KL));
+      const ole = buildOpts(lsGet(KEY_LE));
+      document.querySelectorAll('.sel-name').forEach(s => { const v = s.value; s.innerHTML = okl; s.value = v; });
+      document.querySelectorAll('.sel-task').forEach(s => { const v = s.value; s.innerHTML = ole; s.value = v; });
+    }
+
+    /* ══════════════════════════════════════════════════
+       ZELLE LEEREN
+    ══════════════════════════════════════════════════ */
+    function clearCell(btn) {
+      btn.closest('.cell').querySelectorAll('select').forEach(s => { s.selectedIndex = 0; });
+      saveState();
+    }
+
+    /* ══════════════════════════════════════════════════
+       TABELLE AUFBAUEN
+    ══════════════════════════════════════════════════ */
+    function buildTable() {
+      const tb = document.getElementById('planBody');
+      if (!tb) return;
+      let html = '';
+      for (let r = 1; r <= ROWS; r++) {
+        html += `<tr><td class="nr">${r}</td>`;
+        for (let d = 0; d < 5; d++) {
+          html += `<td class="${DAY_CLS[d]}">
+            <div class="cell">
+              <div class="cell-top">
+                <button class="btn-clr" onclick="clearCell(this)" title="Zelle leeren">↺</button>
+              </div>
+              <select class="sel-name" name="k_${r}_${d}" onchange="saveState()"></select>
+              <div class="sel-row">
+                <select class="sel-task" name="l_${r}_${d}_1" onchange="saveState()"></select>
+                <select class="sel-task" name="l_${r}_${d}_2" onchange="saveState()"></select>
+              </div>
+            </div>
+          </td>`;
         }
-        
-        updateAll();
-        loadAppState();
-    </script>
+        html += '</tr>';
+      }
+      tb.innerHTML = html;
+    }
+
+    /* ══════════════════════════════════════════════════
+       NAVIGATION
+    ══════════════════════════════════════════════════ */
+    function nav(id, btn) {
+      document.querySelectorAll('.pg').forEach(p => p.classList.remove('on'));
+      document.getElementById(id).classList.add('on');
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('on'));
+      if (btn) btn.classList.add('on');
+    }
+
+    /* ══════════════════════════════════════════════════
+       PRINT HOOKS
+    ══════════════════════════════════════════════════ */
+    window.addEventListener('beforeprint', () => {
+      updPhdr(document.getElementById('tourName')?.value || '');
+    });
+
+    /* ══════════════════════════════════════════════════
+       INITIALISIERUNG
+       Reihenfolge: migrate → buildTable → renderLists
+                    → refreshDD → restoreState
+    ══════════════════════════════════════════════════ */
+    (function init() {
+      migrate();
+      buildTable();
+      renderList('klienten');
+      renderList('leistungen');
+      refreshDD();
+      restoreState();
+
+      // Auto-Save: Tab-Wechsel & Schließen (DSGVO: lokal)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') saveState();
+      });
+      window.addEventListener('beforeunload', () => saveState());
+
+      // Druck-Header initialisieren
+      updPhdr(document.getElementById('tourName')?.value || '');
+    })();
+  </script>
 </body>
 </html>
 </html>
