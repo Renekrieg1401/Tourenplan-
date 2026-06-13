@@ -558,7 +558,7 @@
       <button class="zoom-btn" onclick="zoomPlan(+0.1)" title="Vergrößern">+</button>
     </div>
     <span class="nav-badge" title="AES-256-GCM · PBKDF2-SHA-256 · Schlüssel nur im RAM">🔒 AES-256-GCM</span>
-    <button class="btn-print" onclick="window.print()">🖨 Drucken</button>
+    <button class="btn-print" onclick="handlePrint()">🖨 Drucken</button>
   </nav>
 
   <!-- ═══ TOURENPLAN ═══ -->
@@ -1292,7 +1292,123 @@ self.addEventListener('message', e => {
     /* ══════════════════════════════════════════════════
        NAVIGATION
     ══════════════════════════════════════════════════ */
-    /* ════ ZOOM ════ */
+    /* ════ PRINT – iOS-PWA-kompatibel ════
+       iOS Safari im Standalone-Modus blockiert window.print() systemseitig.
+       Lösung: Druckinhalt als eigenständige HTML-Seite generieren →
+               als Blob-URL im neuen Tab öffnen (öffnet Safari) → dort drucken.
+       Alle anderen Plattformen: normales window.print().
+    ════════════════════════════════════════════════════════════════════ */
+    function handlePrint() {
+      /* navigator.standalone: true NUR in iOS Safari PWA Standalone-Modus */
+      if (window.navigator.standalone === true) {
+        _printViaBlob();
+      } else {
+        window.print();
+      }
+    }
+
+    function _printViaBlob() {
+      try {
+        const doc = _buildPrintDoc();
+        const blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        /* Programmatischer Klick öffnet in Safari (nicht im PWA-Frame) */
+        const a = Object.assign(document.createElement('a'),
+                    { href: url, target: '_blank', rel: 'noopener' });
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 15000);
+      } catch {
+        alert('Zum Drucken: Teilen (⬆) → „In Safari öffnen" → Drucken');
+      }
+    }
+
+    function _buildPrintDoc() {
+      /* Tagesnamen */
+      const DAYS = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
+      const DAY_COLORS = {
+        h: ['#92400E','#991B1B','#14532D','#1E3A8A','#581C87'],  /* Header-Text */
+        b: ['#FFFBEB','#FFF1F2','#F0FDF4','#EFF6FF','#FAF5FF']   /* Zell-BG */
+      };
+
+      /* Tour-Name */
+      const tourName = document.getElementById('tourName')?.value || 'Tourenplan';
+
+      /* Uhrzeit-Werte (thead-Zeile) */
+      const times = [0,1,2,3,4].map(d =>
+        (document.querySelector(`input[name="time_${d}"]`)?.value || ''));
+
+      /* Tabellen-Daten: 15 Zeilen × 5 Tage */
+      const rows = [];
+      for (let r = 1; r <= 15; r++) {
+        const cols = [];
+        for (let d = 0; d < 5; d++) {
+          const kl = document.querySelector(`select[name="k_${r}_${d}"]`)?.value || '';
+          const l1 = document.querySelector(`select[name="l_${r}_${d}_1"]`)?.value || '';
+          const l2 = document.querySelector(`select[name="l_${r}_${d}_2"]`)?.value || '';
+          const l3 = document.querySelector(`select[name="l_${r}_${d}_3"]`)?.value || '';
+          cols.push({ kl, l1, l2, l3 });
+        }
+        rows.push(cols);
+      }
+
+      const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      /* Tabellen-HTML */
+      let tHead = `<tr>
+        <th style="width:28px;background:#0F172A;color:#fff;font-size:6.5pt;">#</th>`;
+      DAYS.forEach((d,i) =>
+        tHead += `<th style="background:${DAY_COLORS.h[i]};color:#fff;font-size:6.5pt;padding:1.5mm 1mm;">${d}</th>`);
+      tHead += '</tr><tr>';
+      tHead += `<th style="background:#0F172A;color:#fff;font-size:5.5pt;">Uhr</th>`;
+      DAYS.forEach((d,i) =>
+        tHead += `<th style="background:${DAY_COLORS.b[i]};font-size:7pt;">${esc(times[i])}</th>`);
+      tHead += '</tr>';
+
+      let tBody = '';
+      rows.forEach((cols, ri) => {
+        tBody += `<tr><td style="text-align:center;font-weight:700;font-size:6pt;background:#F8FAFC;border-right:1px solid #666;">${ri+1}</td>`;
+        cols.forEach((c, ci) => {
+          const bg = (c.kl || c.l1 || c.l2 || c.l3) ? DAY_COLORS.b[ci] : '#fff';
+          const leist = [c.l1,c.l2,c.l3].filter(Boolean).join(' · ');
+          tBody += `<td style="background:${bg};padding:1mm 1.5mm;border:.25pt solid #bbb;vertical-align:top;">`;
+          if (c.kl) tBody += `<div style="font-weight:800;font-size:6.5pt;">${esc(c.kl)}</div>`;
+          if (leist) tBody += `<div style="font-size:5.5pt;color:#475569;">${esc(leist)}</div>`;
+          tBody += '</td>';
+        });
+        tBody += '</tr>';
+      });
+
+      /* Heute-Datum */
+      const datum = new Date().toLocaleDateString('de-DE',
+        {weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+
+      return `<!DOCTYPE html><html lang="de"><head>
+<meta charset="UTF-8">
+<title>${esc(tourName)}</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  body   { font-family: -apple-system,sans-serif; font-size: 7pt;
+           margin: 0; padding: 3mm 6mm 0; background: #fff; }
+  h1     { font-size: 10pt; font-weight: 800; margin: 1mm 0 2.5mm;
+           padding-bottom: 1.5mm; border-bottom: .5pt solid #333; }
+  table  { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th, td { border: 1px solid #999; padding: 1mm; text-align: center;
+           vertical-align: top; font-size: 6pt; }
+  th     { font-weight: 700; }
+</style>
+</head><body>
+<h1>${esc(tourName)}</h1>
+<table>
+  <thead>${tHead}</thead>
+  <tbody>${tBody}</tbody>
+</table>
+<script>window.addEventListener('load', () => { window.print(); });<\/script>
+</body></html>`;
+    }
+
+        /* ════ ZOOM ════ */
     const ZOOM_MIN = 0.5, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
     let _zoom = 1.0;
 
