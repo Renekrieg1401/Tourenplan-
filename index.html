@@ -1404,7 +1404,26 @@ self.addEventListener('message', e => {
   <thead>${tHead}</thead>
   <tbody>${tBody}</tbody>
 </table>
-<script>window.addEventListener('load', () => { window.print(); });<\/script>
+<style>
+  @media print { .np { display:none !important; } }
+  .np {
+    position: fixed; top: 10px; right: 10px; z-index: 9999;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .np button {
+    border: none; border-radius: 8px; padding: 10px 18px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: -apple-system, sans-serif;
+  }
+  .np .p { background: #2563EB; color: #fff; }
+  .np .c { background: #64748B; color: #fff; padding: 10px 14px; }
+  .np .p:active { background: #1D4ED8; }
+  .np .c:active { background: #475569; }
+<\/style>
+<div class="np">
+  <button class="p" onclick="window.print()">🖨 Drucken</button>
+  <button class="c" onclick="window.close()">✕</button>
+</div>
 </body></html>`;
     }
 
