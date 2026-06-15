@@ -164,6 +164,22 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .sb-btn.lock-btn{color:var(--txt3)}
 .sb-btn.lock-btn:hover{background:rgba(220,38,38,.06);color:var(--red)}
 
+/* ── PRINT FAB (fixed top-right) ────────────────────────── */
+.print-fab{
+  position:fixed;top:10px;right:10px;z-index:600;
+  padding:7px 15px;
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;border:none;border-radius:100px;
+  font-size:12.5px;font-weight:700;cursor:pointer;
+  box-shadow:0 2px 12px rgba(16,185,129,.38);
+  display:none;align-items:center;gap:6px;
+  transition:transform .15s,box-shadow .15s;
+  white-space:nowrap;
+}
+.print-fab.show{display:flex}
+.print-fab:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(16,185,129,.5)}
+.print-fab:active{transform:none}
+
 /* ── MAIN CONTENT ───────────────────────────────────────── */
 #main{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 16px 16px;height:100%}
 .view{display:none}
@@ -297,7 +313,7 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
   @page{size:landscape;margin:8mm}
   html{overflow:visible!important;transform:none!important;width:auto!important;height:auto!important}
   body,body.unlocked{position:static!important;transform:none!important;width:auto!important;height:auto!important;overflow:visible!important;background:#fff!important}
-  #lock,#sidebar,.modal-wrap,#toast,.clr,.sbadge,.ctop{display:none!important}
+  #lock,#sidebar,.modal-wrap,#toast,.clr,.sbadge,.ctop,.print-fab{display:none!important}
   #app{display:block!important;height:auto!important}
   .app-wrap{display:block!important}
   #main{height:auto!important;overflow:visible!important;padding:0!important}
@@ -364,7 +380,6 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
           <button class="sb-btn" id="btnViewPlan" onclick="showView('viewPlan',this)"><span class="sb-btn-ico">📅</span>Aktiver Plan</button>
           <button class="sb-btn" id="btnViewK" onclick="showView('viewKlienten',this)"><span class="sb-btn-ico">👥</span>Klienten</button>
           <button class="sb-btn" id="btnViewL" onclick="showView('viewLeistungen',this)"><span class="sb-btn-ico">📦</span>Leistungen</button>
-          <button class="sb-btn" onclick="window.print()"><span class="sb-btn-ico">🖨</span>Drucken</button>
           <button class="sb-btn lock-btn" onclick="lockApp()"><span class="sb-btn-ico">🔒</span>Sperren</button>
         </div>
       </div>
@@ -474,6 +489,11 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 </div>
 
 <div id="toast"></div>
+
+<!-- Print button — fixed top-right, always accessible -->
+<button class="print-fab" id="printFab" onclick="doPrint()" title="Drucken">
+  🖨 Drucken
+</button>
 
 <script>
 'use strict';
@@ -826,6 +846,7 @@ async function doBiometric(){
 async function onUnlockSuccess(){
   document.getElementById('lock').style.display='none';
   document.getElementById('app').style.display='block';
+  document.getElementById('printFab').classList.add('show');
   document.body.classList.add('unlocked');
   applyOrientation();
   await Store.load();
@@ -844,6 +865,7 @@ function lockApp(){
   OP.forEach(p=>document.body.style.removeProperty(p));
   document.documentElement.style.overflow='';
   document.getElementById('app').style.display='none';
+  document.getElementById('printFab').classList.remove('show');
   document.getElementById('lock').style.display='flex';
   document.getElementById('lpw').value='';
   document.getElementById('lerr').textContent='';
@@ -1032,6 +1054,21 @@ function buildTable(type){
     html+='</tr>';
   }
   document.getElementById('tb').innerHTML=html;
+}
+
+/* ── PRINT TRIGGER ──────────────────────────────────────── */
+function doPrint(){
+  // Manually fire beforeprint so transforms are removed
+  // BEFORE the native print dialog opens
+  const evt=new Event('beforeprint');
+  window.dispatchEvent(evt);
+  setTimeout(()=>{
+    try{
+      window.print();
+    }catch(e){
+      toast('⚠️ Drucken nicht verfügbar','warn');
+    }
+  },60);
 }
 
 /* ── PRINT HANDLER ──────────────────────────────────────── */
