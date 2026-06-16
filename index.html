@@ -646,19 +646,49 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.0.0';
+const APP_VERSION='3.1.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
+   WICHTIG: APP_VERSION bei jeder Codeänderung erhöhen!
+   Sonst erkennt die alte App keine neue Version.
+
+   Schicht 0: Frühcheck (IIFE) → prüft VOR dem Login-Screen
    Schicht 1: Cache-Control Meta → kein Browser-Cache
-   Schicht 2: Service Worker    → interceptiert Requests,
-                                  erkennt neue Version
-   Schicht 3: Polling           → prüft alle 30min aktiv
+   Schicht 2: Service Worker → interceptiert Requests
+   Schicht 3: Polling → prüft alle 30min + bei App-Fokus
 
    Für Auto-Update: App muss über HTTPS erreichbar sein.
-   UPDATE_CHECK_URL = '' → prüft aktuelle URL (gleicher Host)
+   UPDATE_CHECK_URL = '' → prüft aktuelle Seiten-URL
 ══════════════════════════════════════════════════════════ */
-const UPDATE_CHECK_URL=''; // z.B. 'https://meinserver.de/tourenplan.html'
+const UPDATE_CHECK_URL='';
+
+/* ── Schicht 0: Frühcheck — läuft SOFORT beim Laden ─────── */
+/* Dadurch erkennt auch die ALTE installierte App neue Versionen
+   noch bevor der Login-Screen sichtbar wird.                 */
+(function earlyUpdateCheck(){
+  if(!navigator.onLine||location.protocol==='file:')return;
+  if(location.search.includes('_r='))return; // Reload-Loop verhindern
+  if(sessionStorage.getItem('_euc'))return;  // Einmal pro Session reicht
+  sessionStorage.setItem('_euc','1');
+
+  const url=UPDATE_CHECK_URL||(location.origin+location.pathname);
+  const ctrl=new AbortController();
+  setTimeout(()=>ctrl.abort(),5000);
+
+  fetch(url,{cache:'no-store',signal:ctrl.signal})
+  .then(r=>r.ok?r.text():null)
+  .then(html=>{
+    if(!html)return;
+    const m=html.match(/APP_VERSION='([^']+)'/);
+    if(!m||m[1]===APP_VERSION)return;
+    // Neue Version auf dem Server → sofort neu laden (Cache-Bypass)
+    const u=new URL(location.href);
+    u.searchParams.set('_r',Date.now());
+    location.replace(u.toString());
+  })
+  .catch(()=>{/* Offline oder Fehler → ignorieren */});
+})();
 
 /* ── Service Worker (Schicht 2) ─────────────────────────── */
 /* Registriert ./sw.js — muss neben der HTML-Datei auf dem Server liegen.
