@@ -9,7 +9,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Tourenplan Pro">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2563eb">
 <style>
+/* ── CROSS-PLATFORM BASE ────────────────────────────────── */
+/* Touch: eliminiert 300ms Tap-Delay auf allen Geräten */
+*{-webkit-tap-highlight-color:transparent}
+button,a,[onclick]{touch-action:manipulation}
+/* Firefox scrollbar */
+*{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.14) transparent}
 :root{
   --bg:#f0f4f8;--surf:#fff;--bdr:rgba(0,0,0,.08);
   --blue:#2563eb;--cyan:#0891b2;--green:#059669;
@@ -30,7 +38,8 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 /* ── LOCK (always portrait) ─────────────────────────────── */
 #lock{
   position:fixed;inset:0;z-index:9900;
-  background:rgba(240,244,248,.97);backdrop-filter:blur(24px);
+  background:rgba(240,244,248,.97);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
   display:flex;align-items:center;justify-content:center;padding:24px;
 }
 .lcard{
@@ -267,11 +276,64 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 .db:hover{background:rgba(220,38,38,.08);color:var(--red)}
 .empty{text-align:center;padding:24px;color:var(--txt3);font-size:13px}
 
+/* ── RECOVERY CODE DISPLAY ──────────────────────────────── */
+.rc-display{
+  font-family:'Courier New',Courier,monospace;
+  font-size:22px;font-weight:700;letter-spacing:3px;
+  color:#1e293b;background:#f0fdf4;
+  border:2px solid #86efac;border-radius:var(--rs);
+  padding:14px 10px;text-align:center;margin:14px 0;
+  user-select:all;-webkit-user-select:all;
+}
+.rc-copy{
+  width:100%;padding:10px;margin-bottom:8px;
+  background:#f0fdf4;border:1.5px solid #86efac;
+  border-radius:var(--rs);color:#166534;font-size:13px;
+  font-weight:700;cursor:pointer;transition:all .2s;
+}
+.rc-copy:hover{background:#dcfce7;border-color:#4ade80}
+.rc-copy.copied{background:#dcfce7;border-color:#22c55e;color:#15803d}
+.rc-warn{
+  background:#fef9c3;border:1px solid #fde047;
+  border-radius:var(--rs);padding:10px 12px;
+  font-size:11px;color:#713f12;line-height:1.6;
+  text-align:left;margin-top:8px;
+}
+.rc-confirm{
+  width:100%;padding:12px;margin-top:10px;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  color:#fff;border:none;border-radius:var(--rs);
+  font-size:14px;font-weight:700;cursor:pointer;
+  opacity:.4;transition:all .2s;
+}
+.rc-confirm.ready{opacity:1}
+.rc-confirm.ready:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,.38)}
+
+/* ── RESET CODE INPUT ───────────────────────────────────── */
+.reset-code-input{
+  width:100%;padding:12px 14px;background:#f8fafc;
+  border:1.5px solid rgba(0,0,0,.12);border-radius:var(--rs);
+  font-family:'Courier New',Courier,monospace;
+  font-size:16px;font-weight:700;letter-spacing:3px;
+  text-align:center;text-transform:uppercase;outline:none;
+  margin-bottom:8px;transition:border-color .2s;
+}
+.reset-code-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+.reset-attempts{font-size:10.5px;color:var(--txt3);margin-top:6px}
+
 /* ── MODALS ─────────────────────────────────────────────── */
-.modal-wrap{position:fixed;inset:0;z-index:800;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-wrap{position:fixed;inset:0;z-index:800;display:none;align-items:flex-start;justify-content:center;padding:16px;
+  /* Scrollbar für überhohe Inhalte (z.B. auf rotierten Phones) */
+  overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .modal-wrap.show{display:flex}
-.modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px)}
-.modal-card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:320px;position:relative;z-index:1;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center;animation:floatIn .3s ease}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  /* Scroll-Gesten durchlassen — nur Klick-Events abfangen */
+  touch-action:pan-y}
+.modal-card{background:#fff;border-radius:20px;padding:24px 20px;width:100%;max-width:320px;
+  position:relative;z-index:1;box-shadow:0 20px 60px rgba(0,0,0,.2);text-align:center;
+  animation:floatIn .3s ease;margin:auto;
+  /* Eigener Scroll wenn Karte selbst zu hoch */
+  max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal-title{font-size:18px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;color:var(--txt)}
 .modal-sub{font-size:13px;color:var(--txt2);margin-bottom:20px;line-height:1.5}
 .modal-choices{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
@@ -301,9 +363,18 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 #toast{position:fixed;bottom:18px;right:16px;z-index:9800;padding:9px 16px;border-radius:var(--rs);font-size:12px;font-weight:500;color:#fff;backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,.18);pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity .25s,transform .25s}
 #toast.on{opacity:1;transform:none}
 
-/* ── FORCE LANDSCAPE (only when unlocked) ───────────────── */
-@media screen and (orientation:portrait){
-  body.unlocked{position:fixed!important;top:0!important;left:0!important;width:100dvh!important;height:100dvw!important;transform-origin:0 0!important;transform:translateX(100dvw) rotate(90deg)!important;overflow:hidden!important}
+/* ── FORCE LANDSCAPE — phones only (≤599px portrait) ───── */
+/* Tablets & desktop: no rotation needed, layout works naturally */
+@media screen and (orientation:portrait) and (max-width:599px){
+  body.unlocked{
+    position:fixed!important;top:0!important;left:0!important;
+    width:100vh!important;width:100dvh!important;   /* dvh = modern; vh = fallback */
+    height:100vw!important;height:100dvw!important;
+    transform-origin:0 0!important;
+    transform:translateX(100vw) rotate(90deg)!important;
+    transform:translateX(100dvw) rotate(90deg)!important;
+    overflow:hidden!important;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -358,7 +429,7 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
     <button class="lbtn" id="lbtn" onclick="doUnlock()">Freischalten</button>
     <div class="lerr" id="lerr"></div>
     <div class="lmeta"><span class="ldot"></span>AES-256-GCM · PBKDF2-SHA256 · 200k</div>
-    <span class="lreset" id="lreset" onclick="doReset()">Alle Daten löschen →</span>
+    <span class="lreset" id="lreset" onclick="openResetModal()">Passwort vergessen / Daten löschen →</span>
   </div>
 </div>
 
@@ -475,6 +546,49 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 </div>
 
 <!-- MODAL: Biometrie aktivieren -->
+<!-- MODAL: Wiederherstellungscode (einmalig bei Ersteinrichtung) -->
+<div class="modal-wrap" id="recoveryModal">
+  <div class="modal-overlay"></div><!-- kein Klick-Schließen — Nutzer muss Code bestätigen -->
+  <div class="modal-card">
+    <span style="font-size:38px;display:block;margin-bottom:10px">🔑</span>
+    <div class="modal-title">Wiederherstellungscode</div>
+    <div class="modal-sub">Notiere diesen Code jetzt sicher. Er ist der <b>einzige Weg</b> die App zurückzusetzen, falls du dein Passwort vergisst.</div>
+    <div class="rc-display" id="rcDisplayCode"></div>
+    <button class="rc-copy" id="rcCopyBtn" onclick="copyRecoveryCode()">📋 Code kopieren</button>
+    <div class="rc-warn">
+      ⚠️ <b>Dieser Code wird nur einmal angezeigt.</b><br>
+      Speichere ihn sicher (Notiz, Passwort-Manager, etc.).<br>
+      Ohne Code UND ohne Passwort sind alle Daten dauerhaft verloren.
+    </div>
+    <button class="rc-confirm" id="rcConfirmBtn" onclick="closeRecoveryModal()" disabled>
+      ✓ Code gespeichert — Weiter
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: Zurücksetzen mit Wiederherstellungscode -->
+<div class="modal-wrap" id="resetModal">
+  <div class="modal-overlay" onclick="closeResetModal()"></div>
+  <div class="modal-card">
+    <span style="font-size:38px;display:block;margin-bottom:10px">🔑</span>
+    <div class="modal-title">App zurücksetzen</div>
+    <div class="modal-sub">Gib deinen <b>Wiederherstellungscode</b> ein, um alle Daten zu löschen.</div>
+    <input class="reset-code-input" id="resetCodeInput" placeholder="XXXX-XXXX-XXXX-XXXX"
+           maxlength="19" oninput="formatResetCode(this)"
+           onkeydown="if(event.key==='Enter')confirmReset()">
+    <div class="lerr" id="resetErr" style="min-height:18px;margin-bottom:4px"></div>
+    <div class="reset-attempts" id="resetAttempts"></div>
+    <button class="lbtn" id="resetConfirmBtn" onclick="confirmReset()"
+            style="margin-top:12px;background:linear-gradient(135deg,#dc2626,#b91c1c);box-shadow:0 4px 16px rgba(220,38,38,.32)">
+      Löschen bestätigen
+    </button>
+    <button class="bio-no" onclick="closeResetModal()">Abbrechen</button>
+    <div class="rc-warn" style="margin-top:12px">
+      ⚠️ Ohne Wiederherstellungscode ist kein Zurücksetzen möglich.<br>
+      Vergessene Passwörter können aufgrund der AES-256-Verschlüsselung <b>nicht</b> wiederhergestellt werden.
+    </div>
+  </div>
+</div>
 <div class="modal-wrap" id="bioPromptModal">
   <div class="modal-overlay" onclick="closeBioPrompt()"></div>
   <div class="modal-card">
@@ -507,7 +621,7 @@ function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').repl
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
 const APP_VERSION='3.0.0';
 const Guardian=(()=>{
-  const SACRED=Object.freeze(new Set(['_s','_k','_d']));
+  const SACRED=Object.freeze(new Set(['_s','_k','_d','_rc']));
   let _auth=false;
   const _del=Storage.prototype.removeItem,_clr=Storage.prototype.clear;
   Storage.prototype.removeItem=function(k){
@@ -635,9 +749,8 @@ function genId(){return 'p'+Date.now().toString(36)+Math.random().toString(36).s
 function ensurePlans(){
   if(!S.plans||!Array.isArray(S.plans))S.plans=[];
   if(S.plans.length===0){
-    // Default: 5 Wochenpläne + 3 Wochenendpläne
-    for(let i=1;i<=5;i++)S.plans.push({id:genId(),name:'Woche '+i,type:'week',cells:{}});
-    for(let i=1;i<=3;i++)S.plans.push({id:genId(),name:'WE '+i,type:'weekend',cells:{}});
+    // Standard: 1 Wochenplan — weitere Pläne per + erstellen
+    S.plans.push({id:genId(),name:'Wochenplan',type:'week',cells:{}});
   }
   if(!S.currentPlanId||!S.plans.find(p=>p.id===S.currentPlanId)){
     S.currentPlanId=S.plans[0].id;
@@ -680,7 +793,7 @@ const Store={
     updateStats();
   },
   clear(){
-    Guardian.authorizedDelete(['_s','_k','_d','_v']);
+    Guardian.authorizedDelete(['_s','_k','_d','_v','_rc']);
     Bio.clear();
     S={klienten:[],leistungen:[],plans:[],currentPlanId:''};
     ensurePlans();
@@ -775,17 +888,8 @@ function renamePlan(planId,e){
 function renderSidebar(){
   const c=document.getElementById('sbPlans');
   if(!c)return;
-  const weeks=S.plans.filter(p=>p.type==='week');
-  const wes=S.plans.filter(p=>p.type==='weekend');
   let html='';
-  if(weeks.length){
-    html+='<div class="sb-section-lbl">Wochenpläne</div>';
-    weeks.forEach(p=>{html+=planTab(p);});
-  }
-  if(wes.length){
-    html+='<div class="sb-section-lbl" style="margin-top:8px">Wochenend</div>';
-    wes.forEach(p=>{html+=planTab(p);});
-  }
+  S.plans.forEach(p=>{html+=planTab(p);});
   c.innerHTML=html;
 }
 
@@ -808,12 +912,17 @@ async function doUnlock(){
   if(!pw||pw.length<4){err.textContent='Mindestens 4 Zeichen erforderlich.';return;}
   btn.disabled=true;btn.textContent='⏳ Bitte warten …';err.textContent='';
   try{
-    if(Crypto.hasData())await Crypto.open(pw);
-    else await Crypto.init(pw);
+    const isNew=!Crypto.hasData();
+    if(isNew)await Crypto.init(pw);
+    else await Crypto.open(pw);
     _lastPw=pw;
     await onUnlockSuccess();
-    // Offer biometric registration if not yet registered
-    if(Bio.supported()&&!Bio.registered()){
+    if(isNew){
+      // Ersteinrichtung: Wiederherstellungscode generieren und anzeigen
+      const code=generateRecoveryCode();
+      await storeRecoveryCode(code);
+      showRecoveryModal(code);
+    }else if(Bio.supported()&&!Bio.registered()){
       setTimeout(()=>document.getElementById('bioPromptModal').classList.add('show'),800);
     }
   }catch(e){
@@ -873,18 +982,145 @@ function lockApp(){
   document.getElementById('lpw').focus();
 }
 
-function doReset(){
-  if(!confirm('⚠️ ACHTUNG: Alle verschlüsselten Daten werden unwiderruflich gelöscht.\n\nFortfahren?'))return;
+/* ══════════════════════════════════════════════════════════
+   WIEDERHERSTELLUNGSCODE — einmalig bei Ersteinrichtung
+   Speicherung: SHA-256-Hash in localStorage '_rc'
+   Kein Klartext gespeichert — nur der Hash zum Vergleich
+══════════════════════════════════════════════════════════ */
+function generateRecoveryCode(){
+  // 30 eindeutige Zeichen: keine 0/O/1/I/L-Verwechslung
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes=crypto.getRandomValues(new Uint8Array(16));
+  let code='';
+  for(let i=0;i<16;i++){
+    if(i>0&&i%4===0)code+='-';
+    code+=chars[bytes[i]%chars.length];
+  }
+  return code; // Format: XXXX-XXXX-XXXX-XXXX
+}
+
+async function storeRecoveryCode(code){
+  const clean=code.replace(/-/g,'').toUpperCase();
+  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(clean));
+  localStorage.setItem('_rc',b2h(hash));
+}
+
+async function verifyRecoveryCode(input){
+  const stored=localStorage.getItem('_rc');
+  if(!stored)return false;
+  const clean=input.replace(/-/g,'').replace(/\s/g,'').toUpperCase();
+  if(clean.length!==16)return false;
+  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(clean));
+  return b2h(hash)===stored;
+}
+
+function showRecoveryModal(code){
+  document.getElementById('rcDisplayCode').textContent=code;
+  document.getElementById('rcCopyBtn').classList.remove('copied');
+  document.getElementById('rcCopyBtn').textContent='📋 Code kopieren';
+  document.getElementById('rcConfirmBtn').disabled=true;
+  document.getElementById('rcConfirmBtn').classList.remove('ready');
+  document.getElementById('recoveryModal').classList.add('show');
+}
+
+async function copyRecoveryCode(){
+  const code=document.getElementById('rcDisplayCode').textContent;
+  try{
+    await navigator.clipboard.writeText(code);
+  }catch{
+    // Fallback: select the text
+    const el=document.getElementById('rcDisplayCode');
+    const range=document.createRange();range.selectNode(el);
+    window.getSelection().removeAllRanges();window.getSelection().addRange(range);
+  }
+  const btn=document.getElementById('rcCopyBtn');
+  btn.textContent='✅ Kopiert!';btn.classList.add('copied');
+  // Enable confirm button after copy
+  document.getElementById('rcConfirmBtn').disabled=false;
+  document.getElementById('rcConfirmBtn').classList.add('ready');
+}
+
+function closeRecoveryModal(){
+  document.getElementById('recoveryModal').classList.remove('show');
+  // Offer biometric after recovery code acknowledged
+  if(Bio.supported()&&!Bio.registered()){
+    setTimeout(()=>document.getElementById('bioPromptModal').classList.add('show'),400);
+  }
+}
+
+/* ── RESET MIT WIEDERHERSTELLUNGSCODE ───────────────────── */
+let _resetAttempts=0;
+const MAX_RESET_ATTEMPTS=5;
+
+function formatResetCode(el){
+  // Auto-format: insert dashes every 4 chars
+  let v=el.value.replace(/[^A-Za-z0-9]/g,'').toUpperCase().slice(0,16);
+  let fmt='';
+  for(let i=0;i<v.length;i++){if(i>0&&i%4===0)fmt+='-';fmt+=v[i];}
+  el.value=fmt;
+}
+
+function openResetModal(){
+  if(!localStorage.getItem('_rc')){
+    // No recovery code stored (legacy data) — inform user
+    toast('⚠️ Kein Wiederherstellungscode gefunden. Bitte Passwort verwenden.','warn');
+    return;
+  }
+  if(_resetAttempts>=MAX_RESET_ATTEMPTS){
+    toast('🚫 Zu viele Fehlversuche. App neu starten.','err');return;
+  }
+  document.getElementById('resetCodeInput').value='';
+  document.getElementById('resetErr').textContent='';
+  document.getElementById('resetAttempts').textContent='';
+  document.getElementById('resetConfirmBtn').disabled=false;
+  document.getElementById('resetConfirmBtn').textContent='Löschen bestätigen';
+  document.getElementById('resetModal').classList.add('show');
+  setTimeout(()=>document.getElementById('resetCodeInput').focus(),200);
+}
+
+function closeResetModal(){
+  document.getElementById('resetModal').classList.remove('show');
+}
+
+async function confirmReset(){
+  if(_resetAttempts>=MAX_RESET_ATTEMPTS){
+    toast('🚫 Zu viele Fehlversuche.','err');closeResetModal();return;
+  }
+  const code=document.getElementById('resetCodeInput').value;
+  const errEl=document.getElementById('resetErr');
+  const attEl=document.getElementById('resetAttempts');
+  const btn=document.getElementById('resetConfirmBtn');
+  if(!code||code.replace(/-/g,'').length<16){errEl.textContent='Code eingeben (XXXX-XXXX-XXXX-XXXX)';return;}
+  btn.disabled=true;btn.textContent='⏳ Prüfe …';errEl.textContent='';
+  const ok=await verifyRecoveryCode(code);
+  if(!ok){
+    _resetAttempts++;
+    const left=MAX_RESET_ATTEMPTS-_resetAttempts;
+    errEl.textContent='❌ Falscher Code — Zurücksetzen verweigert.';
+    attEl.textContent=left>0?`Noch ${left} Versuch${left===1?'':'e'} übrig.`:'Keine Versuche mehr. App neu starten.';
+    document.getElementById('resetCodeInput').value='';
+    document.getElementById('resetCodeInput').focus();
+    btn.disabled=_resetAttempts>=MAX_RESET_ATTEMPTS;
+    btn.textContent='Löschen bestätigen';
+    return;
+  }
+  // Code korrekt — letzte Bestätigung
+  closeResetModal();
+  if(!confirm('⚠️ ALLE DATEN werden unwiderruflich gelöscht.\n\nDiese Aktion kann nicht rückgängig gemacht werden!\n\nFortfahren?'))return;
   Store.clear();
+  Crypto.lock();_lastPw='';_resetAttempts=0;
   document.getElementById('lreset').style.display='none';
   document.getElementById('lerr').textContent='';
   document.getElementById('lpw').value='';
   document.getElementById('lsub').textContent='Erstelle ein neues Master-Passwort.';
   document.getElementById('lbtn').textContent='Freischalten';
-  document.getElementById('lpw').focus();
   document.getElementById('bioBtn').classList.remove('show');
   document.getElementById('lOr').classList.remove('show');
+  document.getElementById('lpw').focus();
+  toast('✅ Daten gelöscht — Neues Passwort vergeben');
 }
+
+function doReset(){openResetModal();}
 
 /* ── BIOMETRIC SETUP ────────────────────────────────────── */
 async function registerBiometric(){
@@ -1092,19 +1328,33 @@ window.addEventListener('afterprint',()=>{
   if(document.body.classList.contains('unlocked'))applyOrientation();
 });
 
-/* ── ORIENTATION (only when unlocked) ───────────────────── */
+/* ── ORIENTATION (phones only, not tablets/desktop) ─────── */
 function applyOrientation(){
   if(!document.body.classList.contains('unlocked'))return;
   const b=document.body,d=document.documentElement;
   const w=window.innerWidth,hh=window.innerHeight;
-  if(hh>w){
-    Object.assign(b.style,{position:'fixed',top:'0',left:'0',width:hh+'px',height:w+'px',transformOrigin:'0 0',transform:'translateX('+w+'px) rotate(90deg)',overflow:'hidden'});
+  // Only rotate on small phones (portrait width ≤ 600px)
+  // Tablets (≥768px) and desktop: no rotation needed
+  const isPhone=Math.min(screen.width||w,screen.height||hh)<=600;
+
+  if(hh>w&&isPhone){
+    // Portrait phone → apply landscape rotation
+    Object.assign(b.style,{
+      position:'fixed',top:'0',left:'0',
+      width:hh+'px',height:w+'px',
+      transformOrigin:'0 0',
+      transform:'translateX('+w+'px) rotate(90deg)',
+      overflow:'hidden'
+    });
     d.style.overflow='hidden';
-    const app=document.getElementById('app');if(app)app.style.height=w+'px';
+    const app=document.getElementById('app');
+    if(app)app.style.height=w+'px';
   }else{
+    // Desktop, tablet, or already landscape → normal layout
     OP.forEach(p=>b.style.removeProperty(p));
     d.style.overflow='';
-    const app=document.getElementById('app');if(app)app.style.height=hh+'px';
+    const app=document.getElementById('app');
+    if(app)app.style.height=hh+'px';
   }
 }
 
