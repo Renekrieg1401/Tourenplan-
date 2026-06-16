@@ -661,64 +661,39 @@ const APP_VERSION='3.0.0';
 const UPDATE_CHECK_URL=''; // z.B. 'https://meinserver.de/tourenplan.html'
 
 /* ── Service Worker (Schicht 2) ─────────────────────────── */
+/* Registriert ./sw.js — muss neben der HTML-Datei auf dem Server liegen.
+   Auf GitHub Pages: beide Dateien ins Repository laden.
+   Der SW fängt JEDE Navigation ab → immer frisch vom Server → Auto-Update. */
 (function registerSW(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-
-  // SW-Code als String — wird inline als Blob registriert
-  // Scope-Hinweis: funktioniert auf Chrome/Edge; Safari nutzt Polling-Fallback
-  const swSrc=`
-const CV='${APP_VERSION}';
-const CN='tp-'+CV;
-self.addEventListener('install',e=>{
-  e.waitUntil(
-    caches.open(CN)
-    .then(c=>c.add(self.registration.scope))
-    .then(()=>self.skipWaiting())
-  );
-});
-self.addEventListener('activate',e=>{
-  e.waitUntil(
-    caches.keys()
-    .then(ks=>Promise.all(ks.filter(k=>k!==CN).map(k=>caches.delete(k))))
-    .then(()=>self.clients.claim())
-  );
-});
-self.addEventListener('fetch',e=>{
-  if(e.request.mode==='navigate'){
-    e.respondWith(
-      fetch(e.request,{cache:'no-store'})
-      .then(r=>{
-        const clone=r.clone();
-        caches.open(CN).then(c=>c.put(e.request,clone));
-        // Versionscheck im Response-Body
-        r.clone().text().then(html=>{
-          const m=html.match(/APP_VERSION='([^']+)'/);
-          if(m&&m[1]!==CV){
-            self.clients.matchAll().then(cs=>cs.forEach(c=>c.postMessage({type:'UPDATE',v:m[1]})));
-          }
-        }).catch(()=>{});
-        return r;
-      })
-      .catch(()=>caches.match(e.request))
-    );
-  }
-});
-self.addEventListener('message',e=>{
-  if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();
-});`;
-
-  try{
-    const blob=new Blob([swSrc],{type:'application/javascript'});
-    const url=URL.createObjectURL(blob);
-    navigator.serviceWorker.register(url)
-    .then(()=>{
-      // SW-Nachrichten empfangen (neue Version erkannt)
-      navigator.serviceWorker.addEventListener('message',e=>{
-        if(e.data&&e.data.type==='UPDATE')showUpdateBanner(e.data.v);
+  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+  .then(reg=>{
+    console.log('[SW] Registriert',reg.scope);
+    // Neue Version gefunden → sofort aktivieren
+    reg.addEventListener('updatefound',()=>{
+      const w=reg.installing;
+      w.addEventListener('statechange',()=>{
+        if(w.state==='installed'&&navigator.serviceWorker.controller){
+          // Neuer SW wartet → sofort übernehmen lassen
+          w.postMessage({type:'SKIP_WAITING'});
+        }
       });
-    })
-    .catch(()=>{}); // Fallback: Polling übernimmt
-  }catch(e){}
+    });
+  })
+  .catch(e=>console.log('[SW] Nicht verfügbar (Fallback: Polling aktiv)',e.message));
+
+  // Wenn neuer SW aktiviert wurde → Seite neu laden (neue Version)
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(refreshing)return;
+    refreshing=true;
+    window.location.reload();
+  });
+
+  // SW-Nachrichten empfangen
+  navigator.serviceWorker.addEventListener('message',e=>{
+    if(e.data&&e.data.type==='UPDATE')showUpdateBanner(e.data.v);
+  });
 })();
 
 /* ── Version Polling (Schicht 3, universell) ─────────────── */
