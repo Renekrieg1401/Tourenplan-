@@ -74,4 +74,3 @@ self.addEventListener('message', e => {
     self.skipWaiting();
   }
 });
-});
