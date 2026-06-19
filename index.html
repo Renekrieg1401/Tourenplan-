@@ -411,20 +411,30 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
   @page{size:landscape;margin:8mm}
   html{overflow:visible!important;transform:none!important;width:auto!important;height:auto!important}
   body,body.unlocked{position:static!important;transform:none!important;width:auto!important;height:auto!important;overflow:visible!important;background:#fff!important}
-  #lock,#sidebar,.modal-wrap,#toast,.clr,.sbadge,.ctop,.print-fab{display:none!important}
+  #lock,#sidebar,.modal-wrap,#toast,.clr,.sbadge,.ctop,.print-fab,.update-banner{display:none!important}
   #app{display:block!important;height:auto!important}
   .app-wrap{display:block!important}
   #main{height:auto!important;overflow:visible!important;padding:0!important}
   .view{display:none!important}
-  #viewPlan{display:block!important}
-  #viewPlan{zoom:.72;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #viewPlan{display:block!important;zoom:.72;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .card{background:#fff!important;border:1px solid #e0e0e0!important;box-shadow:none!important;padding:10px!important;margin-bottom:6px!important;transform:none!important}
   .card::before{display:none!important}
-  .cc{background:#fff!important;border:1px solid #ccc!important;min-height:50px!important;display:block!important;padding:3px!important}
+  .cc{background:#fff!important;border:1px solid #ccc!important;min-height:auto!important;display:block!important;padding:3px!important;overflow:visible!important}
   .cc::before{display:none!important}
-  .cs,.sk,.sl,.tr3{display:none!important}
-  .pv-k{display:block!important;font-size:7.5pt!important;font-weight:700!important;color:#1e3a8a!important;padding:2px 3px!important;line-height:1.4!important;border-bottom:.5pt solid #dbeafe!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-  .pv-l{display:block!important;font-size:6pt!important;color:#4c1d95!important;padding:1px 3px!important;line-height:1.3!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  /* Selects als reinen Text drucken — KEIN Pfeil, KEIN Rahmen, KEIN Hintergrund */
+  .cs{
+    -webkit-appearance:none!important;appearance:none!important;
+    background-image:none!important;background-color:transparent!important;
+    border:none!important;box-shadow:none!important;
+    padding:0!important;margin:0 0 1px 0!important;
+    min-height:auto!important;height:auto!important;
+    color:#000!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .sk{font-size:8pt!important;font-weight:700!important;color:#1e3a8a!important;border-bottom:.5pt solid #ccc!important}
+  .sl{font-size:6.5pt!important;color:#4c1d95!important;display:inline-block!important;width:auto!important;margin-right:4px!important}
+  /* Leistungen nebeneinander statt Grid */
+  .tr3{display:block!important;line-height:1.3!important}
   .tn{color:#000!important;border-bottom-color:#ddd!important;font-size:14pt!important}
   .sbar,.plan-type-badge{display:none!important}
   thead th{background:#f5f5f5!important;color:#333!important;border:1px solid #ccc!important;font-size:8pt!important}
@@ -647,7 +657,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.2.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.3.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -1454,40 +1464,29 @@ function buildTable(type){
 /* ── PRINT HANDLER + TRIGGER ─────────────────────────────── */
 const OP=['position','top','left','width','height','transformOrigin','transform','overflowY','overflowX','WebkitOverflowScrolling','zoom'];
 
-// Print-Vorbereitung: Selects → Text-Spans (verhindert schwarze Dreiecke)
+// Print: nur Ansicht & Orientierung anpassen — KEINE DOM-Manipulation
+// (Selects werden per reinem CSS druckbar gemacht, siehe @media print)
 function _printPrepare(){
   document.querySelectorAll('.view').forEach(v=>{v._wo=v.classList.contains('on');v.classList.remove('on');});
   document.getElementById('viewPlan').classList.add('on');
   OP.forEach(p=>document.body.style.removeProperty(p));
   document.documentElement.style.overflow='';
   document.documentElement.style.transform='';
-  document.querySelectorAll('.cc').forEach(cell=>{
-    if(cell._pv)return;
-    const ov=document.createElement('div');
-    const kSp=document.createElement('span');kSp.className='pv-k';kSp.textContent=(cell.querySelector('.sk')||{}).value||'';ov.appendChild(kSp);
-    cell.querySelectorAll('.sl').forEach(sel=>{const sp=document.createElement('span');sp.className='pv-l';sp.textContent=sel.value||'';ov.appendChild(sp);});
-    cell.appendChild(ov);cell._pv=ov;
-  });
 }
 
-// Print-Aufräumung: Spans entfernen, Ansicht & Orientierung wiederherstellen
 function _printCleanup(){
-  document.querySelectorAll('.cc').forEach(cell=>{if(cell._pv){cell._pv.remove();delete cell._pv;}});
   document.querySelectorAll('.view').forEach(v=>{v.classList.toggle('on',!!v._wo);delete v._wo;});
   if(document.body.classList.contains('unlocked'))applyOrientation();
 }
 
 function doPrint(){
   _printPrepare();
-  // Kurze Verzögerung damit DOM/Layout sich setzt, dann drucken
   setTimeout(()=>{
     try{window.print();}catch(e){toast('⚠️ Drucken nicht verfügbar','warn');}
-    // GARANTIERTE Aufräumung — egal ob afterprint feuert oder nicht (iOS-Fix)
-    setTimeout(_printCleanup,800);
+    setTimeout(_printCleanup,500);
   },100);
 }
 
-// Zusätzlich native Events abfangen (Desktop Ctrl+P, Browser-Menü)
 window.addEventListener('beforeprint',_printPrepare);
 window.addEventListener('afterprint',_printCleanup);
 
