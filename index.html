@@ -657,7 +657,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.3.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.4.1'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -1461,11 +1461,10 @@ function buildTable(type){
   document.getElementById('tb').innerHTML=html;
 }
 
-/* ── PRINT HANDLER + TRIGGER ─────────────────────────────── */
+/* ── PRINT (PWA-kompatibel) ──────────────────────────────── */
 const OP=['position','top','left','width','height','transformOrigin','transform','overflowY','overflowX','WebkitOverflowScrolling','zoom'];
 
-// Print: nur Ansicht & Orientierung anpassen — KEINE DOM-Manipulation
-// (Selects werden per reinem CSS druckbar gemacht, siehe @media print)
+// Nur für direkten Browser-Druck nötig (kein standalone-PWA)
 function _printPrepare(){
   document.querySelectorAll('.view').forEach(v=>{v._wo=v.classList.contains('on');v.classList.remove('on');});
   document.getElementById('viewPlan').classList.add('on');
@@ -1473,22 +1472,102 @@ function _printPrepare(){
   document.documentElement.style.overflow='';
   document.documentElement.style.transform='';
 }
-
 function _printCleanup(){
   document.querySelectorAll('.view').forEach(v=>{v.classList.toggle('on',!!v._wo);delete v._wo;});
   if(document.body.classList.contains('unlocked'))applyOrientation();
 }
-
-function doPrint(){
-  _printPrepare();
-  setTimeout(()=>{
-    try{window.print();}catch(e){toast('⚠️ Drucken nicht verfügbar','warn');}
-    setTimeout(_printCleanup,500);
-  },100);
-}
-
 window.addEventListener('beforeprint',_printPrepare);
 window.addEventListener('afterprint',_printCleanup);
+
+function isStandalonePWA(){
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone===true; // iOS-spezifisch
+}
+
+function doPrint(){
+  if(!isStandalonePWA()){
+    // Normaler Browser-Tab → window.print() funktioniert direkt
+    _printPrepare();
+    setTimeout(()=>{
+      try{window.print();}catch(e){toast('⚠️ Drucken nicht verfügbar','warn');}
+      setTimeout(_printCleanup,500);
+    },100);
+    return;
+  }
+  // Installierte PWA (Homescreen-Icon) → iOS blockiert window.print() im
+  // standalone-Modus komplett. Workaround: Druck-Dokument in neuem Tab öffnen.
+  const plan=S.plans.find(p=>p.id===S.currentPlanId);
+  if(!plan){toast('⚠️ Kein Plan aktiv','warn');return;}
+  const isWE=plan.type==='weekend';
+  const days=isWE?['Samstag','Sonntag']:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
+  const headColors=isWE?['#92400e','#9f1239']:['#1e40af','#166534','#4c1d95','#92400e','#9d174d'];
+  const cells=plan.cells||{};
+
+  // Tabellenzeilen bauen
+  let rows='';
+  for(let r=1;r<=15;r++){
+    rows+='<tr><td class="num">'+r+'</td>';
+    for(let c=0;c<days.length;c++){
+      const k=cells['k_'+r+'_'+c]||'';
+      const l1=cells['l_'+r+'_'+c+'_1']||'';
+      const l2=cells['l_'+r+'_'+c+'_2']||'';
+      const l3=cells['l_'+r+'_'+c+'_3']||'';
+      const leist=[l1,l2,l3].filter(Boolean).join(' · ');
+      rows+='<td class="cell">';
+      if(k)rows+='<div class="kl">'+esc(k)+'</div>';
+      if(leist)rows+='<div class="le">'+esc(leist)+'</div>';
+      rows+='</td>';
+    }
+    rows+='</tr>';
+  }
+
+  let headCells='<th class="num">#</th>';
+  days.forEach((d,i)=>{headCells+='<th style="color:'+headColors[i]+'">'+d+'</th>';});
+
+  const doc=
+'<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">'+
+'<meta name="viewport" content="width=device-width,initial-scale=1">'+
+'<title>'+esc(plan.name||'Tourenplan')+'</title><style>'+
+'@page{size:landscape;margin:8mm}'+
+'*{margin:0;padding:0;box-sizing:border-box}'+
+'body{font-family:-apple-system,Segoe UI,sans-serif;padding:12px;color:#1e293b}'+
+'.hd{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;border-bottom:2px solid #ddd;padding-bottom:8px}'+
+'h1{font-size:20px}.sub{font-size:11px;color:#666}'+
+'.pbtn{background:#059669;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}'+
+'@media print{.pbtn,.note{display:none!important}}'+
+'.note{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#1e40af}'+
+'table{width:100%;border-collapse:collapse;table-layout:fixed}'+
+'th,td{border:1px solid #ccc;padding:4px;vertical-align:top;font-size:9px}'+
+'th{background:#f5f5f5;font-size:9px;text-transform:uppercase;letter-spacing:.5px;text-align:center;font-weight:700}'+
+'.num{width:24px;text-align:center;color:#999;font-weight:700;vertical-align:middle}'+
+'.cell{height:42px}'+
+'.kl{font-weight:700;color:#1e3a8a;font-size:9px;border-bottom:.5px solid #ddd;padding-bottom:1px;margin-bottom:1px}'+
+'.le{color:#4c1d95;font-size:7.5px;line-height:1.3}'+
+'</style></head><body>'+
+'<div class="note">📄 Tippe auf „Drucken / PDF" oder nutze das Teilen-Menü deines Browsers, um zu drucken oder als PDF zu speichern.</div>'+
+'<div class="hd"><div><h1>'+esc(plan.name||'Tourenplan')+'</h1>'+
+'<div class="sub">'+(isWE?'Wochenendplan':'Wochenplan')+' · '+days.join(' – ')+'</div></div>'+
+'<button class="pbtn" onclick="window.print()">🖨 Drucken / PDF</button></div>'+
+'<table><thead><tr>'+headCells+'</tr></thead><tbody>'+rows+'</tbody></table>'+
+'<script>setTimeout(function(){try{window.print()}catch(e){}},400)<\/script>'+
+'</body></html>';
+
+  // Neues Fenster öffnen (funktioniert auch in iOS-PWA)
+  const w=window.open('','_blank');
+  if(w){
+    w.document.open();
+    w.document.write(doc);
+    w.document.close();
+  }else{
+    // Popup blockiert → als Data-URL im selben Tab (Fallback)
+    const blob=new Blob([doc],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    location.href=url;
+  }
+}
+
+// esc Helper für Druck-HTML
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 /* ── ORIENTATION (phones only, not tablets/desktop) ─────── */
 function applyOrientation(){
@@ -1537,4 +1616,5 @@ function applyOrientation(){
 })();
 </script>
 </body>
+</html>
 </html>
