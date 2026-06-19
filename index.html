@@ -657,7 +657,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.5.1'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.6.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -1466,146 +1466,140 @@ function buildTable(type){
   document.getElementById('tb').innerHTML=html;
 }
 
-/* ── PRINT (PWA-kompatibel) ──────────────────────────────── */
-const OP=['position','top','left','width','height','transformOrigin','transform','overflowY','overflowX','WebkitOverflowScrolling','zoom'];
+/* ══════════════════════════════════════════════════════════
+   DRUCK — immer als einseitiges DIN A4 PDF (Querformat),
+   Inhalt wird automatisch auf die Seite skaliert.
+   Kein window.print() mehr nötig — funktioniert identisch
+   im Browser UND in der installierten PWA.
+══════════════════════════════════════════════════════════ */
 
-// Nur für direkten Browser-Druck nötig (kein standalone-PWA)
-function _printPrepare(){
-  document.querySelectorAll('.view').forEach(v=>{v._wo=v.classList.contains('on');v.classList.remove('on');});
-  document.getElementById('viewPlan').classList.add('on');
-  OP.forEach(p=>document.body.style.removeProperty(p));
-  document.documentElement.style.overflow='';
-  document.documentElement.style.transform='';
-}
-function _printCleanup(){
-  document.querySelectorAll('.view').forEach(v=>{v.classList.toggle('on',!!v._wo);delete v._wo;});
-  if(document.body.classList.contains('unlocked'))applyOrientation();
-}
-window.addEventListener('beforeprint',_printPrepare);
-window.addEventListener('afterprint',_printCleanup);
-
-function isStandalonePWA(){
-  return window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone===true; // iOS-spezifisch
-}
+// DIN A4 Querformat in PDF-Punkten (Standard: 842 × 595 pt)
+const A4_PT_W=842,A4_PT_H=595;
+// Render-Auflösung (200 dpi) für scharfen Druck
+const PDF_DPI=200,PX_PER_PT=PDF_DPI/72;
+const A4_PX_W=Math.round(A4_PT_W*PX_PER_PT),A4_PX_H=Math.round(A4_PT_H*PX_PER_PT);
 
 function doPrint(){
-  if(!isStandalonePWA()){
-    // Normaler Browser-Tab → window.print() funktioniert direkt
-    _printPrepare();
-    setTimeout(()=>{
-      try{window.print();}catch(e){toast('⚠️ Drucken nicht verfügbar','warn');}
-      setTimeout(_printCleanup,500);
-    },100);
-    return;
-  }
-  // Installierte PWA (Homescreen-Icon): window.print() ist in iOS' Standalone-
-  // Modus grundsätzlich deaktiviert — auch in neu geöffneten Fenstern, da diese
-  // dieselbe eingeschränkte App-Engine nutzen (kein echter Safari-Kontext).
-  // Lösung: Plan als Bild rendern → natives Teilen-Menü → "Drucken" (AirPrint).
-  sharePlanAsImage();
+  generateAndSharePDF();
 }
 
-async function sharePlanAsImage(){
+async function generateAndSharePDF(){
   const plan=S.plans.find(p=>p.id===S.currentPlanId);
   if(!plan){toast('⚠️ Kein Plan aktiv','warn');return;}
-  toast('🖼️ Erstelle Druckvorlage …');
+  toast('📄 Erstelle PDF …');
   try{
-    const canvas=renderPlanCanvas(plan);
-    canvas.toBlob(async (blob)=>{
-      if(!blob){toast('❌ Fehler beim Erstellen','err');return;}
-      const fname=(plan.name||'Tourenplan').replace(/[^\w\-äöüÄÖÜß ]/g,'')+'.png';
-      const file=new File([blob],fname,{type:'image/png'});
-      if(navigator.canShare&&navigator.canShare({files:[file]})){
-        try{
-          await navigator.share({files:[file],title:plan.name||'Tourenplan'});
-        }catch(e){
-          if(e.name!=='AbortError')toast('Teilen abgebrochen','warn');
-        }
-      }else{
-        // Web Share nicht verfügbar → Bild speichern, manuell drucken
-        const url=URL.createObjectURL(blob);
-        const a=document.createElement('a');
-        a.href=url;a.download=fname;
-        document.body.appendChild(a);a.click();a.remove();
-        setTimeout(()=>URL.revokeObjectURL(url),30000);
-        toast('💾 Bild gespeichert — über Fotos-App drucken');
+    const canvas=renderPlanCanvasA4(plan);
+    const dataUrl=canvas.toDataURL('image/jpeg',0.95);
+    const jpegBytes=_dataURLToBytes(dataUrl);
+    const pdfBlob=_buildA4PDF(jpegBytes,canvas.width,canvas.height);
+    const fname=(plan.name||'Tourenplan').replace(/[^\w\-äöüÄÖÜß ]/g,'')+'.pdf';
+    const file=new File([pdfBlob],fname,{type:'application/pdf'});
+
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file],title:plan.name||'Tourenplan'});
+      }catch(e){
+        if(e.name!=='AbortError')toast('Teilen abgebrochen','warn');
       }
-    },'image/png',0.95);
+    }else{
+      // Kein Web Share → PDF direkt herunterladen (Browser öffnet/druckt PDF)
+      const url=URL.createObjectURL(pdfBlob);
+      const a=document.createElement('a');
+      a.href=url;a.download=fname;
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
+      toast('💾 PDF gespeichert (DIN A4)');
+    }
   }catch(e){
     toast('❌ Fehler: '+e.message,'err');
   }
 }
 
-/* ── Plan als Canvas-Bild rendern (für Teilen/Drucken) ──── */
-function renderPlanCanvas(plan){
+/* ── Plan auf festes DIN-A4-Raster rendern (Auto-Fit) ───── */
+function renderPlanCanvasA4(plan){
   const isWE=plan.type==='weekend';
   const days=isWE?['Samstag','Sonntag']:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
   const headColors=isWE?['#92400e','#9f1239']:['#1e40af','#166534','#4c1d95','#92400e','#9d174d'];
   const headBg=isWE?['#fffbeb','#fff1f2']:['#eff6ff','#ecfdf5','#f5f3ff','#fffbeb','#fdf2f8'];
   const cells=plan.cells||{};
-  const sc=2; // Skalierung für scharfen Druck
-  const numColW=40*sc,colW=220*sc,rowH=62*sc,headH=44*sc,titleH=60*sc,pad=18*sc;
   const dayCount=days.length;
-  const W=pad*2+numColW+colW*dayCount;
-  const H=pad*2+titleH+headH+rowH*15;
 
+  // Feste A4-Seite (immer gleiche Pixelgröße, unabhängig vom Inhalt)
+  const W=A4_PX_W,H=A4_PX_H;
   const canvas=document.createElement('canvas');
   canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
   ctx.textBaseline='top';
 
+  // Seitenrand (10mm bei 200dpi)
+  const margin=Math.round(10/25.4*PDF_DPI);
+  const availW=W-margin*2,availH=H-margin*2;
+
+  // Basis-Maße (ungeskaliert) für die Inhaltsberechnung
+  const base={numColW:40,colW:220,rowH:46,headH:34,titleH:46};
+  const contentW0=base.numColW+base.colW*dayCount;
+  const contentH0=base.titleH+base.headH+base.rowH*15;
+
+  // Auto-Skalierung: passt IMMER vollständig auf die A4-Seite
+  // (begrenzt durch Breite UND Höhe — garantiert eine einzige Seite)
+  const fit=Math.min(availW/contentW0,availH/contentH0);
+
+  const numColW=base.numColW*fit,colW=base.colW*fit,rowH=base.rowH*fit,
+        headH=base.headH*fit,titleH=base.titleH*fit;
+  const ox=margin,oy=margin; // Ursprung (oben links, innerhalb der Ränder)
+
   // Titel
   ctx.fillStyle='#1e293b';
-  ctx.font='bold '+(22*sc)+'px -apple-system,Segoe UI,sans-serif';
-  ctx.fillText(plan.name||'Tourenplan',pad,pad);
+  ctx.font='bold '+Math.round(20*fit)+'px -apple-system,Segoe UI,sans-serif';
+  ctx.fillText(plan.name||'Tourenplan',ox,oy);
   ctx.fillStyle='#666';
-  ctx.font=(12*sc)+'px -apple-system,Segoe UI,sans-serif';
-  ctx.fillText((isWE?'Wochenendplan':'Wochenplan')+' · '+days.join(' – '),pad,pad+28*sc);
+  ctx.font=Math.round(11*fit)+'px -apple-system,Segoe UI,sans-serif';
+  ctx.fillText((isWE?'Wochenendplan':'Wochenplan')+' · '+days.join(' – '),ox,oy+24*fit);
 
-  let y=pad+titleH;
+  let y=oy+titleH;
 
   // Header-Zeile
-  ctx.strokeStyle='#ccc';ctx.lineWidth=1*sc;
-  ctx.strokeRect(pad,y,numColW,headH);
-  ctx.font='bold '+(11*sc)+'px -apple-system,Segoe UI,sans-serif';
+  ctx.lineWidth=Math.max(1,1*fit);
+  ctx.strokeStyle='#ccc';
+  ctx.strokeRect(ox,y,numColW,headH);
+  ctx.font='bold '+Math.round(10*fit)+'px -apple-system,Segoe UI,sans-serif';
   days.forEach((d,i)=>{
-    const x=pad+numColW+colW*i;
+    const x=ox+numColW+colW*i;
     ctx.fillStyle=headBg[i];ctx.fillRect(x,y,colW,headH);
     ctx.strokeStyle='#ccc';ctx.strokeRect(x,y,colW,headH);
     ctx.fillStyle=headColors[i];ctx.textAlign='center';
-    ctx.fillText(d.toUpperCase(),x+colW/2,y+headH/2-5*sc);
+    ctx.fillText(d.toUpperCase(),x+colW/2,y+headH/2-5*fit);
   });
   ctx.textAlign='left';
   y+=headH;
 
   for(let r=1;r<=15;r++){
     ctx.strokeStyle='#ccc';
-    ctx.strokeRect(pad,y,numColW,rowH);
+    ctx.strokeRect(ox,y,numColW,rowH);
     ctx.fillStyle='#999';ctx.textAlign='center';
-    ctx.font='bold '+(11*sc)+'px -apple-system,Segoe UI,sans-serif';
-    ctx.fillText(String(r),pad+numColW/2,y+rowH/2-5*sc);
+    ctx.font='bold '+Math.round(9*fit)+'px -apple-system,Segoe UI,sans-serif';
+    ctx.fillText(String(r),ox+numColW/2,y+rowH/2-4*fit);
     ctx.textAlign='left';
 
     days.forEach((d,c)=>{
-      const x=pad+numColW+colW*c;
+      const x=ox+numColW+colW*c;
       ctx.strokeStyle='#ccc';ctx.strokeRect(x,y,colW,rowH);
       const k=cells['k_'+r+'_'+c]||'';
       const l1=cells['l_'+r+'_'+c+'_1']||'';
       const l2=cells['l_'+r+'_'+c+'_2']||'';
       const l3=cells['l_'+r+'_'+c+'_3']||'';
       const leist=[l1,l2,l3].filter(Boolean).join(' · ');
-      const ip=10*sc;
+      const ip=8*fit;
       if(k){
         ctx.fillStyle='#1e3a8a';
-        ctx.font='bold '+(13*sc)+'px -apple-system,Segoe UI,sans-serif';
-        ctx.fillText(_truncCanvas(ctx,k,colW-ip*2),x+ip,y+10*sc);
+        ctx.font='bold '+Math.round(11*fit)+'px -apple-system,Segoe UI,sans-serif';
+        ctx.fillText(_truncCanvas(ctx,k,colW-ip*2),x+ip,y+6*fit);
       }
       if(leist){
         ctx.fillStyle='#4c1d95';
-        ctx.font=(11*sc)+'px -apple-system,Segoe UI,sans-serif';
-        ctx.fillText(_truncCanvas(ctx,leist,colW-ip*2),x+ip,y+32*sc);
+        ctx.font=Math.round(9*fit)+'px -apple-system,Segoe UI,sans-serif';
+        ctx.fillText(_truncCanvas(ctx,leist,colW-ip*2),x+ip,y+22*fit);
       }
     });
     y+=rowH;
@@ -1620,7 +1614,57 @@ function _truncCanvas(ctx,text,maxW){
   return t+'…';
 }
 
+/* ── Minimaler PDF-Builder (eine Seite, ein Bild, DIN A4) ── */
+function _dataURLToBytes(dataUrl){
+  const base64=dataUrl.split(',')[1];
+  const bin=atob(base64);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  return bytes;
+}
+
+function _buildA4PDF(jpegBytes,imgPxW,imgPxH){
+  const enc=s=>new TextEncoder().encode(s);
+  const parts=[];let total=0;const off={};
+  const push=b=>{parts.push(b);total+=b.length;};
+  const pushStr=s=>push(enc(s));
+
+  pushStr('%PDF-1.4\n');
+
+  off[1]=total;
+  pushStr('1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n');
+
+  off[2]=total;
+  pushStr('2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n');
+
+  off[3]=total;
+  pushStr('3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+A4_PT_W+' '+A4_PT_H+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>endobj\n');
+
+  off[4]=total;
+  pushStr('4 0 obj<< /Type /XObject /Subtype /Image /Width '+imgPxW+' /Height '+imgPxH+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpegBytes.length+' >>\nstream\n');
+  push(jpegBytes);
+  pushStr('\nendstream endobj\n');
+
+  off[5]=total;
+  const content='q '+A4_PT_W+' 0 0 '+A4_PT_H+' 0 0 cm /Im0 Do Q';
+  const cBytes=enc(content);
+  pushStr('5 0 obj<< /Length '+cBytes.length+' >>\nstream\n');
+  push(cBytes);
+  pushStr('\nendstream endobj\n');
+
+  const xrefOff=total;
+  let xref='xref\n0 6\n0000000000 65535 f \n';
+  for(let i=1;i<=5;i++)xref+=String(off[i]).padStart(10,'0')+' 00000 n \n';
+  pushStr(xref);
+  pushStr('trailer<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xrefOff+'\n%%EOF');
+
+  const buf=new Uint8Array(total);
+  let p=0;for(const part of parts){buf.set(part,p);p+=part.length;}
+  return new Blob([buf],{type:'application/pdf'});
+}
+
 /* ── ORIENTATION (phones only, not tablets/desktop) ─────── */
+const OP=['position','top','left','width','height','transformOrigin','transform','overflowY','overflowX','WebkitOverflowScrolling','zoom'];
 function applyOrientation(){
   if(!document.body.classList.contains('unlocked'))return;
   const b=document.body,d=document.documentElement;
