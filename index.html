@@ -657,7 +657,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.5.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.5.1'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -952,6 +952,7 @@ const Store={
       else{ensurePlans();}
     }
     ensurePlans();
+    sortKlienten();
 
     renderLists();
     renderSidebar();
@@ -1332,7 +1333,11 @@ function addItem(key,inputId){
   if((S[key]||[]).includes(v)){toast('⚠️ Bereits vorhanden','warn');return;}
   if(!S[key])S[key]=[];
   S[key].push(v);el.value='';
+  if(key==='klienten')sortKlienten();
   renderLists();refreshDropdowns();triggerSave();
+}
+function sortKlienten(){
+  if(S.klienten)S.klienten.sort((a,b)=>a.localeCompare(b,'de',{sensitivity:'base'}));
 }
 function delItem(key,idx){
   if(!S[key])return;
