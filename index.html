@@ -478,6 +478,7 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
           <button class="sb-btn" id="btnViewPlan" onclick="showView('viewPlan',this)"><span class="sb-btn-ico">📅</span>Aktiver Plan</button>
           <button class="sb-btn" id="btnViewK" onclick="showView('viewKlienten',this)"><span class="sb-btn-ico">👥</span>Klienten</button>
           <button class="sb-btn" id="btnViewL" onclick="showView('viewLeistungen',this)"><span class="sb-btn-ico">📦</span>Leistungen</button>
+          <button class="sb-btn" onclick="forceUpdate()"><span class="sb-btn-ico">🔄</span>Nach Update suchen</button>
           <button class="sb-btn lock-btn" onclick="lockApp()"><span class="sb-btn-ico">🔒</span>Sperren</button>
         </div>
       </div>
@@ -646,7 +647,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.1.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.2.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -669,25 +670,35 @@ const UPDATE_CHECK_URL='';
 (function earlyUpdateCheck(){
   if(!navigator.onLine||location.protocol==='file:')return;
   if(location.search.includes('_r='))return; // Reload-Loop verhindern
-  if(sessionStorage.getItem('_euc'))return;  // Einmal pro Session reicht
-  sessionStorage.setItem('_euc','1');
 
   const url=UPDATE_CHECK_URL||(location.origin+location.pathname);
   const ctrl=new AbortController();
-  setTimeout(()=>ctrl.abort(),5000);
+  setTimeout(()=>ctrl.abort(),6000);
 
-  fetch(url,{cache:'no-store',signal:ctrl.signal})
+  fetch(url+'?_chk='+Date.now(),{cache:'no-store',signal:ctrl.signal})
   .then(r=>r.ok?r.text():null)
-  .then(html=>{
+  .then(async html=>{
     if(!html)return;
     const m=html.match(/APP_VERSION='([^']+)'/);
     if(!m||m[1]===APP_VERSION)return;
-    // Neue Version auf dem Server → sofort neu laden (Cache-Bypass)
+    console.log('[Update] Neue Version gefunden:',m[1],'aktuell:',APP_VERSION);
+    // Service-Worker-Cache komplett löschen (iOS-PWA hält sonst alte Version)
+    try{
+      if('caches' in window){
+        const keys=await caches.keys();
+        await Promise.all(keys.map(k=>caches.delete(k)));
+      }
+      if('serviceWorker' in navigator){
+        const regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r=>r.unregister()));
+      }
+    }catch(e){}
+    // Frische Version laden (Cache-Bypass)
     const u=new URL(location.href);
     u.searchParams.set('_r',Date.now());
     location.replace(u.toString());
   })
-  .catch(()=>{/* Offline oder Fehler → ignorieren */});
+  .catch(()=>{/* Offline → ignorieren */});
 })();
 
 /* ── Service Worker (Schicht 2) ─────────────────────────── */
@@ -741,6 +752,26 @@ function applyUpdate(){
   const u=new URL(UPDATE_CHECK_URL||location.href);
   u.searchParams.set('_r',Date.now());
   location.replace(u.toString());
+}
+
+/* Manuelles Update: Cache + SW löschen, dann neu laden */
+async function forceUpdate(){
+  toast('🔄 Suche nach Updates …');
+  try{
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  // Harte Neuladung mit Cache-Bypass
+  const u=new URL(location.href);
+  u.searchParams.delete('_r');
+  u.searchParams.set('_fu',Date.now());
+  setTimeout(()=>location.replace(u.toString()),300);
 }
 
 document.addEventListener('visibilitychange',()=>{
@@ -1422,41 +1453,43 @@ function buildTable(type){
 
 /* ── PRINT HANDLER + TRIGGER ─────────────────────────────── */
 const OP=['position','top','left','width','height','transformOrigin','transform','overflowY','overflowX','WebkitOverflowScrolling','zoom'];
-window.addEventListener('beforeprint',()=>{
+
+// Print-Vorbereitung: Selects → Text-Spans (verhindert schwarze Dreiecke)
+function _printPrepare(){
   document.querySelectorAll('.view').forEach(v=>{v._wo=v.classList.contains('on');v.classList.remove('on');});
   document.getElementById('viewPlan').classList.add('on');
   OP.forEach(p=>document.body.style.removeProperty(p));
   document.documentElement.style.overflow='';
   document.documentElement.style.transform='';
   document.querySelectorAll('.cc').forEach(cell=>{
-    if(cell._pv)return; // Guard: doppelten beforeprint-Aufruf verhindern
+    if(cell._pv)return;
     const ov=document.createElement('div');
     const kSp=document.createElement('span');kSp.className='pv-k';kSp.textContent=(cell.querySelector('.sk')||{}).value||'';ov.appendChild(kSp);
     cell.querySelectorAll('.sl').forEach(sel=>{const sp=document.createElement('span');sp.className='pv-l';sp.textContent=sel.value||'';ov.appendChild(sp);});
     cell.appendChild(ov);cell._pv=ov;
   });
-});
+}
 
-window.addEventListener('afterprint',()=>{
+// Print-Aufräumung: Spans entfernen, Ansicht & Orientierung wiederherstellen
+function _printCleanup(){
   document.querySelectorAll('.cc').forEach(cell=>{if(cell._pv){cell._pv.remove();delete cell._pv;}});
   document.querySelectorAll('.view').forEach(v=>{v.classList.toggle('on',!!v._wo);delete v._wo;});
   if(document.body.classList.contains('unlocked'))applyOrientation();
-});
+}
 
 function doPrint(){
-  // beforeprint manuell auslösen (iOS-Kompatibilität)
-  // Guard im Handler verhindert doppelte Span-Injektion falls print() es nochmal auslöst
-  window.dispatchEvent(new Event('beforeprint'));
+  _printPrepare();
+  // Kurze Verzögerung damit DOM/Layout sich setzt, dann drucken
   setTimeout(()=>{
-    try{
-      window.print();
-    }catch(e){
-      // Print blockiert → sofort aufräumen
-      window.dispatchEvent(new Event('afterprint'));
-      toast('⚠️ Drucken nicht verfügbar','warn');
-    }
-  },80);
+    try{window.print();}catch(e){toast('⚠️ Drucken nicht verfügbar','warn');}
+    // GARANTIERTE Aufräumung — egal ob afterprint feuert oder nicht (iOS-Fix)
+    setTimeout(_printCleanup,800);
+  },100);
 }
+
+// Zusätzlich native Events abfangen (Desktop Ctrl+P, Browser-Menü)
+window.addEventListener('beforeprint',_printPrepare);
+window.addEventListener('afterprint',_printCleanup);
 
 /* ── ORIENTATION (phones only, not tablets/desktop) ─────── */
 function applyOrientation(){
