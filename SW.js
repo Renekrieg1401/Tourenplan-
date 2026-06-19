@@ -10,7 +10,7 @@
  * Fertig — Auto-Update funktioniert ab sofort.
  */
 
-const CACHE = 'tourenplan-offline-v3.3.0';
+const CACHE = 'tourenplan-offline-v3.4.1';
 
 /* ── Install: sofort aktivieren, kein Warten ─────────────── */
 self.addEventListener('install', e => {
@@ -73,4 +73,5 @@ self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
 });
