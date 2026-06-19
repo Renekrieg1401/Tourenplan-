@@ -696,75 +696,53 @@ const UPDATE_CHECK_URL='';
    Der SW fängt JEDE Navigation ab → immer frisch vom Server → Auto-Update. */
 (function registerSW(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+  // Beide Schreibweisen probieren (GitHub Pages: Linux = case-sensitive!)
+  const tryReg=p=>navigator.serviceWorker.register(p,{scope:'./'});
+  tryReg('./sw.js').catch(()=>tryReg('./SW.js'))
   .then(reg=>{
-    console.log('[SW] Registriert',reg.scope);
-    // Neue Version gefunden → sofort aktivieren
+    console.log('[SW] OK:',reg.scope);
     reg.addEventListener('updatefound',()=>{
       const w=reg.installing;
       w.addEventListener('statechange',()=>{
-        if(w.state==='installed'&&navigator.serviceWorker.controller){
-          // Neuer SW wartet → sofort übernehmen lassen
+        if(w.state==='installed'&&navigator.serviceWorker.controller)
           w.postMessage({type:'SKIP_WAITING'});
-        }
       });
     });
   })
-  .catch(e=>console.log('[SW] Nicht verfügbar (Fallback: Polling aktiv)',e.message));
-
-  // Wenn neuer SW aktiviert wurde → Seite neu laden (neue Version)
-  let refreshing=false;
+  .catch(e=>console.log('[SW] Nicht verfügbar – Polling aktiv:',e.message));
+  let _ref=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    if(refreshing)return;
-    refreshing=true;
-    window.location.reload();
+    if(_ref)return;_ref=true;location.reload();
   });
-
-  // SW-Nachrichten empfangen
   navigator.serviceWorker.addEventListener('message',e=>{
-    if(e.data&&e.data.type==='UPDATE')showUpdateBanner(e.data.v);
+    if(e.data&&e.data.type==='UPDATE')applyUpdate(); // Sofort updaten, kein Banner
   });
 })();
 
 /* ── Version Polling (Schicht 3, universell) ─────────────── */
-let _updateChecked=false;
-
 async function checkForUpdate(){
-  if(!navigator.onLine)return;
-  const url=UPDATE_CHECK_URL||(location.protocol!=='file:'?location.href:null);
+  if(!navigator.onLine||location.search.includes('_r='))return;
+  const url=UPDATE_CHECK_URL||(location.protocol!=='file:'?location.origin+location.pathname:null);
   if(!url)return;
   try{
-    const res=await fetch(url+'?_v='+Date.now(),{
-      cache:'no-store',
-      signal:AbortSignal.timeout?AbortSignal.timeout(6000):undefined
-    });
+    const ctrl=new AbortController();
+    setTimeout(()=>ctrl.abort(),5000);
+    const res=await fetch(url,{cache:'no-store',signal:ctrl.signal});
     if(!res.ok)return;
     const html=await res.text();
     const m=html.match(/APP_VERSION='([^']+)'/);
-    if(m&&m[1]&&m[1]!==APP_VERSION)showUpdateBanner(m[1]);
+    if(!m||m[1]===APP_VERSION)return;
+    // Neue Version → SOFORT automatisch laden — kein Banner, kein Tap nötig
+    applyUpdate();
   }catch(e){}
 }
 
-function showUpdateBanner(newV){
-  if(document.getElementById('updateBanner'))return;
-  const el=document.createElement('div');
-  el.id='updateBanner';
-  el.className='update-banner';
-  el.innerHTML=
-    '<span>🔄 Update v'+newV+' verfügbar</span>'+
-    '<button class="upd-btn" onclick="applyUpdate()">Jetzt laden</button>'+
-    '<button class="cls-btn" onclick="document.getElementById(\'updateBanner\').remove()">×</button>';
-  document.body.appendChild(el);
-}
-
 function applyUpdate(){
-  // Hard-Reload mit Cache-Bypass via Timestamp-Parameter
   const u=new URL(UPDATE_CHECK_URL||location.href);
-  u.searchParams.set('_nc',Date.now());
+  u.searchParams.set('_r',Date.now());
   location.replace(u.toString());
 }
 
-// Auto-Update auslösen: beim Entsperren + Visibility-Change + alle 30min
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&Crypto.isOpen())checkForUpdate();
 });
@@ -1442,22 +1420,7 @@ function buildTable(type){
   document.getElementById('tb').innerHTML=html;
 }
 
-/* ── PRINT TRIGGER ──────────────────────────────────────── */
-function doPrint(){
-  // Manually fire beforeprint so transforms are removed
-  // BEFORE the native print dialog opens
-  const evt=new Event('beforeprint');
-  window.dispatchEvent(evt);
-  setTimeout(()=>{
-    try{
-      window.print();
-    }catch(e){
-      toast('⚠️ Drucken nicht verfügbar','warn');
-    }
-  },60);
-}
-
-/* ── PRINT HANDLER ──────────────────────────────────────── */
+/* ── PRINT HANDLER + TRIGGER ─────────────────────────────── */
 const OP=['position','top','left','width','height','transformOrigin','transform','overflowY','overflowX','WebkitOverflowScrolling','zoom'];
 window.addEventListener('beforeprint',()=>{
   document.querySelectorAll('.view').forEach(v=>{v._wo=v.classList.contains('on');v.classList.remove('on');});
@@ -1466,17 +1429,34 @@ window.addEventListener('beforeprint',()=>{
   document.documentElement.style.overflow='';
   document.documentElement.style.transform='';
   document.querySelectorAll('.cc').forEach(cell=>{
+    if(cell._pv)return; // Guard: doppelten beforeprint-Aufruf verhindern
     const ov=document.createElement('div');
     const kSp=document.createElement('span');kSp.className='pv-k';kSp.textContent=(cell.querySelector('.sk')||{}).value||'';ov.appendChild(kSp);
     cell.querySelectorAll('.sl').forEach(sel=>{const sp=document.createElement('span');sp.className='pv-l';sp.textContent=sel.value||'';ov.appendChild(sp);});
     cell.appendChild(ov);cell._pv=ov;
   });
 });
+
 window.addEventListener('afterprint',()=>{
   document.querySelectorAll('.cc').forEach(cell=>{if(cell._pv){cell._pv.remove();delete cell._pv;}});
   document.querySelectorAll('.view').forEach(v=>{v.classList.toggle('on',!!v._wo);delete v._wo;});
   if(document.body.classList.contains('unlocked'))applyOrientation();
 });
+
+function doPrint(){
+  // beforeprint manuell auslösen (iOS-Kompatibilität)
+  // Guard im Handler verhindert doppelte Span-Injektion falls print() es nochmal auslöst
+  window.dispatchEvent(new Event('beforeprint'));
+  setTimeout(()=>{
+    try{
+      window.print();
+    }catch(e){
+      // Print blockiert → sofort aufräumen
+      window.dispatchEvent(new Event('afterprint'));
+      toast('⚠️ Drucken nicht verfügbar','warn');
+    }
+  },80);
+}
 
 /* ── ORIENTATION (phones only, not tablets/desktop) ─────── */
 function applyOrientation(){
