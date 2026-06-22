@@ -673,7 +673,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.9.1'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='4.0.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -1609,13 +1609,16 @@ async function generateAndSharePDF(){
     const canvas=renderPlanCanvasA4(plan);
     const dataUrl=canvas.toDataURL('image/jpeg',0.95);
     const jpegBytes=_dataURLToBytes(dataUrl);
-    // Seite bleibt intern im Querformat (Inhalt füllt sie komplett aus —
-    // einfache, robuste "cm"-Skalierung). Der PDF-Standard-Eintrag /Rotate 90
-    // weist den Drucker an, die Seite beim Ausgeben um 90° zu drehen, sodass
-    // sie auf physischem Hochformat-Papier (AirPrint-Standard) randlos passt.
-    // Das ist zuverlässiger als manuelle Pixel-Rotation, da /Rotate ein
-    // Kernfeature des PDF-Standards ist, das jede Druck-Engine korrekt liest.
-    const pdfBlob=_buildA4PDF(jpegBytes,canvas.width,canvas.height,A4_PT_W,A4_PT_H,90);
+    let pdfBlob;
+    if(isPortraitPlan(plan)){
+      // W/S-Touren: Inhalt ist bereits für Hochformat gestaltet —
+      // PDF-Seite direkt im Hochformat, keine Rotation nötig.
+      pdfBlob=_buildA4PDF(jpegBytes,canvas.width,canvas.height,A4_PT_H,A4_PT_W,0);
+    }else{
+      // Alle anderen Touren: Querformat-Inhalt + Standard-/Rotate 90,
+      // damit AirPrints übliches Hochformat-Papier randlos gefüllt wird.
+      pdfBlob=_buildA4PDF(jpegBytes,canvas.width,canvas.height,A4_PT_W,A4_PT_H,90);
+    }
     const fname=(plan.name||'Tourenplan').replace(/[^\w\-äöüÄÖÜß ]/g,'')+'.pdf';
     const file=new File([pdfBlob],fname,{type:'application/pdf'});
 
@@ -1640,6 +1643,13 @@ async function generateAndSharePDF(){
 }
 
 /* ── Plan auf festes DIN-A4-Raster rendern (Auto-Fit) ───── */
+/* Touren, deren Name mit W (Wochenende) oder S (Spätdienst) beginnt,
+   werden im Hochformat gedruckt — alle anderen bleiben im Querformat. */
+function isPortraitPlan(plan){
+  const n=(plan.name||'').trim();
+  return /^[ws]/i.test(n);
+}
+
 function renderPlanCanvasA4(plan){
   const isWE=plan.type==='weekend';
   const days=isWE?['Samstag','Sonntag']:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
@@ -1649,8 +1659,9 @@ function renderPlanCanvasA4(plan){
   const dayCount=days.length;
   const rowCount=plan.rows||15; // Aktuelle Zeilenzahl des Plans — Druck skaliert immer passend dazu
 
-  // Feste A4-Seite (immer gleiche Pixelgröße, unabhängig vom Inhalt)
-  const W=A4_PX_W,H=A4_PX_H;
+  // Seitenform: W/S-Touren → Hochformat, alle anderen → Querformat
+  const portrait=isPortraitPlan(plan);
+  const W=portrait?A4_PX_H:A4_PX_W,H=portrait?A4_PX_W:A4_PX_H;
   const canvas=document.createElement('canvas');
   canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
@@ -1666,7 +1677,7 @@ function renderPlanCanvasA4(plan){
   const contentW0=base.numColW+base.colW*dayCount;
   const contentH0=base.titleH+base.headH+base.rowH*rowCount;
 
-  // Auto-Skalierung: passt IMMER vollständig auf die A4-Seite —
+  // Auto-Skalierung: passt IMMER vollständig auf die Seite —
   // unabhängig davon wie viele Zeilen der Plan inzwischen hat
   // (begrenzt durch Breite UND Höhe — garantiert eine einzige Seite)
   const fit=Math.min(availW/contentW0,availH/contentH0);
