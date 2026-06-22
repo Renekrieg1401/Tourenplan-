@@ -255,7 +255,11 @@ thead th:nth-child(5){background:#fffbeb;color:#d97706;border-color:#fcd34d}
 thead th:nth-child(6){background:#fdf2f8;color:#db2777;border-color:#f9a8d4}
 .we-table thead th:nth-child(2){background:#fffbeb;color:#d97706;border-color:#fcd34d}
 .we-table thead th:nth-child(3){background:#fff1f2;color:#e11d48;border-color:#fda4af}
-tbody td:first-child{text-align:center;vertical-align:middle;font-size:10px;font-weight:700;color:var(--txt3)}
+tbody td:first-child{vertical-align:middle;padding:0}
+.rownum{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:100%}
+.rn{font-size:10px;font-weight:700;color:var(--txt3)}
+.delr{background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;font-weight:700;line-height:1;padding:1px 5px;border-radius:4px;opacity:.6;transition:all .15s}
+.delr:hover{opacity:1;background:rgba(220,38,38,.12)}
 .cc{background:#fafbfc;border:1px solid rgba(0,0,0,.08);border-radius:var(--rx);padding:4px;min-height:90px;display:flex;flex-direction:column;gap:3px;
   /* Statischer 3D-Look: dezente Tiefe ohne Bewegung */
   box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 1px 3px rgba(0,0,0,.06);
@@ -423,7 +427,7 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
   @page{size:landscape;margin:8mm}
   html{overflow:visible!important;transform:none!important;width:auto!important;height:auto!important}
   body,body.unlocked{position:static!important;transform:none!important;width:auto!important;height:auto!important;overflow:visible!important;background:#fff!important}
-  #lock,#sidebar,.modal-wrap,#toast,.clr,.sbadge,.ctop,.print-fab,.update-banner{display:none!important}
+  #lock,#sidebar,.modal-wrap,#toast,.clr,.addr,.delr,.sbadge,.ctop,.print-fab,.update-banner{display:none!important}
   #app{display:block!important;height:auto!important}
   .app-wrap{display:block!important}
   #main{height:auto!important;overflow:visible!important;padding:0!important}
@@ -669,7 +673,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.7.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.8.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -1488,7 +1492,7 @@ function buildTable(type,rows){
   document.getElementById('planHead').innerHTML='<tr><th>#</th>'+days.map(d=>'<th>'+d+'</th>').join('')+'</tr>';
   let html='';
   for(let r=1;r<=rows;r++){
-    html+='<tr><td>'+r+'</td>';
+    html+='<tr><td class="rownum"><span class="rn">'+r+'</span><button class="delr" onclick="deleteRowAt('+r+')" title="Zeile löschen">×</button></td>';
     for(let c=0;c<days.length;c++){
       html+='<td><div class="cc">'
         +'<div class="ctop">'
@@ -1541,6 +1545,43 @@ function addRowAt(afterRow){
   loadPlanDOM(plan.id);
   triggerSave();
   toast('➕ Zeile eingefügt');
+}
+
+/* ── ZEILE LÖSCHEN ───────────────────────────────────────── */
+function deleteRowAt(r){
+  const plan=S.plans.find(p=>p.id===S.currentPlanId);
+  if(!plan)return;
+  const rows=plan.rows||15;
+  if(rows<=1){toast('⚠️ Mindestens eine Zeile erforderlich','warn');return;}
+  if(!confirm('Zeile '+r+' löschen?\nVorhandene Einträge in dieser Zeile gehen verloren.'))return;
+
+  savePlanDOM(); // aktuelle Eingaben sichern, bevor verschoben wird
+  const dayCount=plan.type==='weekend'?2:5;
+
+  // Zeile r entfernen
+  for(let c=0;c<dayCount;c++){
+    delete plan.cells['k_'+r+'_'+c];
+    ['_1','_2','_3'].forEach(suf=>delete plan.cells['l_'+r+'_'+c+suf]);
+  }
+  // Nachfolgende Zeilen nach oben verschieben (aufsteigend, um Lücke zu schließen)
+  for(let rr=r+1;rr<=rows;rr++){
+    for(let c=0;c<dayCount;c++){
+      const kOld='k_'+rr+'_'+c,kNew='k_'+(rr-1)+'_'+c;
+      if(plan.cells[kOld]!==undefined){plan.cells[kNew]=plan.cells[kOld];delete plan.cells[kOld];}
+      else delete plan.cells[kNew];
+      ['_1','_2','_3'].forEach(suf=>{
+        const lOld='l_'+rr+'_'+c+suf,lNew='l_'+(rr-1)+'_'+c+suf;
+        if(plan.cells[lOld]!==undefined){plan.cells[lNew]=plan.cells[lOld];delete plan.cells[lOld];}
+        else delete plan.cells[lNew];
+      });
+    }
+  }
+  plan.rows=rows-1;
+  buildTable(plan.type,plan.rows);
+  refreshDropdowns();
+  loadPlanDOM(plan.id);
+  triggerSave();
+  toast('🗑️ Zeile gelöscht');
 }
 
 /* ══════════════════════════════════════════════════════════
