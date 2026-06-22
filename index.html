@@ -673,7 +673,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.8.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.9.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -1606,10 +1606,16 @@ async function generateAndSharePDF(){
   if(!plan){toast('⚠️ Kein Plan aktiv','warn');return;}
   toast('📄 Erstelle PDF …');
   try{
-    const canvas=renderPlanCanvasA4(plan);
-    const dataUrl=canvas.toDataURL('image/jpeg',0.95);
+    const landscapeCanvas=renderPlanCanvasA4(plan);
+    // AirPrint wählt bei generischem Datei-Druck oft automatisch Hochformat-
+    // Papier und skaliert unsere Querformat-Seite nur proportional ein, statt
+    // sie zu drehen → großer weißer Rand. Fix: Inhalt selbst um 90° drehen und
+    // in eine Hochformat-PDF-Seite einbetten — füllt die Seite IMMER komplett.
+    const portraitCanvas=_rotate90(landscapeCanvas);
+    const dataUrl=portraitCanvas.toDataURL('image/jpeg',0.95);
     const jpegBytes=_dataURLToBytes(dataUrl);
-    const pdfBlob=_buildA4PDF(jpegBytes,canvas.width,canvas.height);
+    // Seite jetzt im Hochformat (Breite/Höhe von A4 vertauscht)
+    const pdfBlob=_buildA4PDF(jpegBytes,portraitCanvas.width,portraitCanvas.height,A4_PT_H,A4_PT_W);
     const fname=(plan.name||'Tourenplan').replace(/[^\w\-äöüÄÖÜß ]/g,'')+'.pdf';
     const file=new File([pdfBlob],fname,{type:'application/pdf'});
 
@@ -1631,6 +1637,19 @@ async function generateAndSharePDF(){
   }catch(e){
     toast('❌ Fehler: '+e.message,'err');
   }
+}
+
+/* Dreht ein Canvas um 90° (im Uhrzeigersinn) in ein neues,
+   seitenvertauschtes Canvas — füllt es vollständig aus. */
+function _rotate90(src){
+  const w=src.width,h=src.height;
+  const dst=document.createElement('canvas');
+  dst.width=h;dst.height=w;
+  const ctx=dst.getContext('2d');
+  ctx.translate(h,0);
+  ctx.rotate(Math.PI/2);
+  ctx.drawImage(src,0,0,w,h);
+  return dst;
 }
 
 /* ── Plan auf festes DIN-A4-Raster rendern (Auto-Fit) ───── */
@@ -1743,7 +1762,8 @@ function _dataURLToBytes(dataUrl){
   return bytes;
 }
 
-function _buildA4PDF(jpegBytes,imgPxW,imgPxH){
+function _buildA4PDF(jpegBytes,imgPxW,imgPxH,pageWpt,pageHpt){
+  pageWpt=pageWpt||A4_PT_W;pageHpt=pageHpt||A4_PT_H;
   const enc=s=>new TextEncoder().encode(s);
   const parts=[];let total=0;const off={};
   const push=b=>{parts.push(b);total+=b.length;};
@@ -1758,7 +1778,7 @@ function _buildA4PDF(jpegBytes,imgPxW,imgPxH){
   pushStr('2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n');
 
   off[3]=total;
-  pushStr('3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+A4_PT_W+' '+A4_PT_H+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>endobj\n');
+  pushStr('3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pageWpt+' '+pageHpt+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>endobj\n');
 
   off[4]=total;
   pushStr('4 0 obj<< /Type /XObject /Subtype /Image /Width '+imgPxW+' /Height '+imgPxH+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpegBytes.length+' >>\nstream\n');
@@ -1766,7 +1786,7 @@ function _buildA4PDF(jpegBytes,imgPxW,imgPxH){
   pushStr('\nendstream endobj\n');
 
   off[5]=total;
-  const content='q '+A4_PT_W+' 0 0 '+A4_PT_H+' 0 0 cm /Im0 Do Q';
+  const content='q '+pageWpt+' 0 0 '+pageHpt+' 0 0 cm /Im0 Do Q';
   const cBytes=enc(content);
   pushStr('5 0 obj<< /Length '+cBytes.length+' >>\nstream\n');
   push(cBytes);
