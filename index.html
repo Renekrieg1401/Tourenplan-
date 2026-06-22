@@ -222,8 +222,12 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .view.on{display:block}
 
 /* ── CARDS ──────────────────────────────────────────────── */
-.card{background:#fff;border:1px solid var(--bdr);border-radius:var(--r);padding:14px 16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);transition:box-shadow .3s,transform .3s;transform-style:preserve-3d}
-.card:hover{box-shadow:0 6px 24px rgba(0,0,0,.08)}
+.card{background:#fff;border:1px solid var(--bdr);border-radius:var(--r);padding:14px 16px;margin-bottom:12px;
+  /* Statischer 3D-Look: mehrschichtiger Schatten + dezenter Top-Highlight — KEINE Bewegung */
+  box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 3px 6px rgba(0,0,0,.04),0 8px 20px rgba(0,0,0,.07);
+  border-top-color:rgba(255,255,255,.9);border-bottom-color:rgba(0,0,0,.12);
+}
+/* Kein Hover-Effekt mehr — statischer 3D-Look bleibt konstant */
 
 /* ── PLAN HEADER ────────────────────────────────────────── */
 .ph{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -252,9 +256,12 @@ thead th:nth-child(6){background:#fdf2f8;color:#db2777;border-color:#f9a8d4}
 .we-table thead th:nth-child(2){background:#fffbeb;color:#d97706;border-color:#fcd34d}
 .we-table thead th:nth-child(3){background:#fff1f2;color:#e11d48;border-color:#fda4af}
 tbody td:first-child{text-align:center;vertical-align:middle;font-size:10px;font-weight:700;color:var(--txt3)}
-.cc{background:#fafbfc;border:1px solid rgba(0,0,0,.08);border-radius:var(--rx);padding:4px;min-height:90px;display:flex;flex-direction:column;gap:3px;transition:transform .2s,border-color .2s,box-shadow .2s,background .2s;position:relative;overflow:hidden}
+.cc{background:#fafbfc;border:1px solid rgba(0,0,0,.08);border-radius:var(--rx);padding:4px;min-height:90px;display:flex;flex-direction:column;gap:3px;
+  /* Statischer 3D-Look: dezente Tiefe ohne Bewegung */
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 1px 3px rgba(0,0,0,.06);
+  transition:border-color .2s,box-shadow .2s,background .2s;position:relative;overflow:hidden}
 .cc::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.8) 0%,rgba(255,255,255,0) 60%)}
-.cc:hover{transform:translateY(-2px) translateZ(6px);z-index:5;background:#fff}
+.cc:hover{z-index:5;background:#fff}
 td:nth-child(2) .cc:hover{border-color:rgba(37,99,235,.4);box-shadow:0 4px 16px rgba(37,99,235,.14)}
 td:nth-child(3) .cc:hover{border-color:rgba(5,150,105,.4);box-shadow:0 4px 16px rgba(5,150,105,.14)}
 td:nth-child(4) .cc:hover{border-color:rgba(124,58,237,.4);box-shadow:0 4px 16px rgba(124,58,237,.14)}
@@ -269,7 +276,9 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 .we-table td:nth-child(3) .cc:hover{border-color:rgba(225,29,72,.4);box-shadow:0 4px 16px rgba(225,29,72,.14)}
 .we-table td:nth-child(2) .cc.filled{border-color:rgba(217,119,6,.22);background:#fffbeb}
 .we-table td:nth-child(3) .cc.filled{border-color:rgba(225,29,72,.22);background:#fff1f2}
-.ctop{display:flex;justify-content:flex-end;height:12px}
+.ctop{display:flex;justify-content:flex-end;align-items:center;gap:3px;height:14px}
+.addr{background:none;border:none;color:var(--green);cursor:pointer;font-size:13px;font-weight:700;padding:0 3px;line-height:1;border-radius:3px;transition:color .15s,background .15s}
+.addr:hover{background:rgba(5,150,105,.1);color:#047857}
 .clr{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:11px;padding:0;line-height:1;border-radius:3px;transition:color .15s}
 .clr:hover{color:var(--red)}
 .cs{width:100%;font-size:9.5px;font-weight:600;padding:4px 18px 4px 6px;border-radius:4px;color:var(--txt);outline:none;cursor:pointer;min-height:23px;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 4px center;background-size:7px 4px;transition:border-color .15s,background-color .15s;box-shadow:0 1px 2px rgba(0,0,0,.07)}
@@ -299,6 +308,9 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 .lrl{display:flex;align-items:center;gap:8px}
 .ldotk{width:6px;height:6px;border-radius:50%;background:var(--cyan);flex-shrink:0}
 .ldotl{width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0}
+.lract{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.eb{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:14px;width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.eb:hover{background:rgba(37,99,235,.08);color:var(--blue)}
 .db{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:18px;width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .db:hover{background:rgba(220,38,38,.08);color:var(--red)}
 .empty{text-align:center;padding:24px;color:var(--txt3);font-size:13px}
@@ -657,7 +669,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='3.6.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='3.7.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -918,7 +930,7 @@ function ensurePlans(){
   if(!S.plans||!Array.isArray(S.plans))S.plans=[];
   if(S.plans.length===0){
     // Standard: 1 Wochenplan — weitere Pläne per + erstellen
-    S.plans.push({id:genId(),name:'Wochenplan',type:'week',cells:{}});
+    S.plans.push({id:genId(),name:'Wochenplan',type:'week',rows:15,cells:{}});
   }
   if(!S.currentPlanId||!S.plans.find(p=>p.id===S.currentPlanId)){
     S.currentPlanId=S.plans[0].id;
@@ -944,19 +956,20 @@ const Store={
       const LABELS={w1:'Woche 1',w2:'Woche 2',w3:'Woche 3',w4:'Woche 4',w5:'Woche 5',we1:'WE 1',we2:'WE 2',we3:'WE 3'};
       const TYPES={w1:'week',w2:'week',w3:'week',w4:'week',w5:'week',we1:'weekend',we2:'weekend',we3:'weekend'};
       const old=S.plans;
-      S.plans=ORDER.map(id=>({id:'m_'+id,name:LABELS[id],type:TYPES[id],cells:(old[id]||{}).cells||{}}));
+      S.plans=ORDER.map(id=>({id:'m_'+id,name:LABELS[id],type:TYPES[id],rows:15,cells:(old[id]||{}).cells||{}}));
       S.currentPlanId='m_w1';
     }
     if(!S.plans||S.plans.length===0){
-      if(S.plan){S.plans=[{id:genId(),name:S.tourName||'Woche 1',type:'week',cells:S.plan}];delete S.plan;delete S.tourName;}
+      if(S.plan){S.plans=[{id:genId(),name:S.tourName||'Woche 1',type:'week',rows:15,cells:S.plan}];delete S.plan;delete S.tourName;}
       else{ensurePlans();}
     }
     ensurePlans();
+    S.plans.forEach(p=>{if(!p.rows)p.rows=15;}); // Legacy-Pläne ohne rows-Feld absichern
     sortKlienten();
 
     renderLists();
     renderSidebar();
-    buildTable(currentPlanDef().type);
+    buildTable(currentPlanDef().type,currentPlanDef().rows);
     refreshDropdowns();
     loadPlanDOM(S.currentPlanId);
     updateStats();
@@ -1003,8 +1016,12 @@ function switchPlan(planId){
   savePlanDOM();
   S.currentPlanId=planId;
   const p=S.plans.find(pp=>pp.id===planId);
-  const oldType=document.getElementById('planTable').className.includes('we-table')?'weekend':'week';
-  if(p&&p.type!==oldType){buildTable(p.type);refreshDropdowns();}
+  if(p){
+    if(!p.rows)p.rows=15;
+    // Immer neu aufbauen — Zeilenzahl kann pro Plan unterschiedlich sein
+    buildTable(p.type,p.rows);
+    refreshDropdowns();
+  }
   loadPlanDOM(planId);
   renderSidebar();
   showView('viewPlan',document.getElementById('btnViewPlan'));
@@ -1015,11 +1032,11 @@ function createPlan(type){
   savePlanDOM();
   const count=S.plans.filter(p=>p.type===type).length+1;
   const name=type==='weekend'?'WE '+count:'Woche '+count;
-  const np={id:genId(),name,type,cells:{}};
+  const np={id:genId(),name,type,rows:15,cells:{}};
   S.plans.push(np);
   S.currentPlanId=np.id;
   closeNewPlanModal();
-  buildTable(type);
+  buildTable(type,15);
   refreshDropdowns();
   loadPlanDOM(np.id);
   renderSidebar();
@@ -1344,15 +1361,47 @@ function delItem(key,idx){
   S[key].splice(idx,1);
   renderLists();refreshDropdowns();triggerSave();
 }
+function editKlient(idx){
+  const oldName=S.klienten[idx];
+  if(oldName===undefined)return;
+  const input=prompt('Klient bearbeiten:',oldName);
+  if(input===null)return; // Abgebrochen
+  const newName=input.trim();
+  if(!newName||newName.length>120)return;
+  if(newName===oldName)return;
+  if(S.klienten.includes(newName)){toast('⚠️ Name bereits vorhanden','warn');return;}
+  S.klienten[idx]=newName;
+  sortKlienten();
+  // Namen in allen Plänen aktualisieren — bestehende Zuordnungen bleiben erhalten
+  S.plans.forEach(p=>{
+    Object.keys(p.cells||{}).forEach(k=>{
+      if(k.startsWith('k_')&&p.cells[k]===oldName)p.cells[k]=newName;
+    });
+  });
+  renderLists();refreshDropdowns();
+  loadPlanDOM(S.currentPlanId);
+  triggerSave();
+  toast('✏️ Klient aktualisiert');
+}
 function renderLists(){
-  const rend=(key,dc)=>{
-    const items=S[key]||[];
-    const el=document.getElementById('list-'+key);if(!el)return;
-    el.innerHTML=items.length
-      ?items.map((it,i)=>'<div class="lr"><div class="lrl"><span class="'+dc+'"></span>'+h(it)+'</div><button class="db" onclick="delItem(\''+key+'\','+i+')">×</button></div>').join('')
+  const items=S.klienten||[];
+  const elK=document.getElementById('list-klienten');
+  if(elK){
+    elK.innerHTML=items.length
+      ?items.map((it,i)=>'<div class="lr"><div class="lrl"><span class="ldotk"></span>'+h(it)+'</div>'
+        +'<div class="lract">'
+        +'<button class="eb" onclick="editKlient('+i+')" title="Bearbeiten">✎</button>'
+        +'<button class="db" onclick="delItem(\'klienten\','+i+')" title="Löschen">×</button>'
+        +'</div></div>').join('')
       :'<div class="empty">Noch keine Einträge.</div>';
-  };
-  rend('klienten','ldotk');rend('leistungen','ldotl');
+  }
+  const le=S.leistungen||[];
+  const elL=document.getElementById('list-leistungen');
+  if(elL){
+    elL.innerHTML=le.length
+      ?le.map((it,i)=>'<div class="lr"><div class="lrl"><span class="ldotl"></span>'+h(it)+'</div><button class="db" onclick="delItem(\'leistungen\','+i+')" title="Löschen">×</button></div>').join('')
+      :'<div class="empty">Noch keine Einträge.</div>';
+  }
   const kc=document.getElementById('kc'),lcc=document.getElementById('lc');
   if(kc)kc.textContent=(S.klienten||[]).length;
   if(lcc)lcc.textContent=(S.leistungen||[]).length;
@@ -1428,21 +1477,9 @@ function updateStats(){
   if(sw)sw.textContent=wk;if(sc)sc.textContent=cli;if(se)se.textContent=ent;
 }
 
-/* ── 3D TILT ────────────────────────────────────────────── */
-function init3D(){
-  document.querySelectorAll('.card').forEach(card=>{
-    card.addEventListener('mousemove',e=>{
-      const r=card.getBoundingClientRect();
-      const x=((e.clientX-r.left)/r.width-.5)*5;
-      const y=((e.clientY-r.top)/r.height-.5)*-5;
-      card.style.transform='perspective(1200px) rotateX('+y+'deg) rotateY('+x+'deg) translateZ(4px)';
-    });
-    card.addEventListener('mouseleave',()=>{card.style.transform='';});
-  });
-}
-
 /* ── TABLE BUILDER ──────────────────────────────────────── */
-function buildTable(type){
+function buildTable(type,rows){
+  rows=rows||15;
   const isWE=(type==='weekend');
   const days=isWE?['Samstag','Sonntag']:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
   const table=document.getElementById('planTable');
@@ -1450,10 +1487,14 @@ function buildTable(type){
   document.getElementById('planCols').innerHTML='<col>'+days.map(()=>'<col>').join('');
   document.getElementById('planHead').innerHTML='<tr><th>#</th>'+days.map(d=>'<th>'+d+'</th>').join('')+'</tr>';
   let html='';
-  for(let r=1;r<=15;r++){
+  for(let r=1;r<=rows;r++){
     html+='<tr><td>'+r+'</td>';
     for(let c=0;c<days.length;c++){
-      html+='<td><div class="cc"><div class="ctop"><button class="clr" onclick="clearCell(this)">↺</button></div>'
+      html+='<td><div class="cc">'
+        +'<div class="ctop">'
+        +'<button class="addr" onclick="addRowAt('+r+')" title="Zeile danach einfügen">+</button>'
+        +'<button class="clr" onclick="clearCell(this)" title="Leeren">↺</button>'
+        +'</div>'
         +'<select class="cs sk" data-n="k_'+r+'_'+c+'" onchange="triggerSave();syncCell(this)"></select>'
         +'<div class="tr3">'
         +'<select class="cs sl" data-n="l_'+r+'_'+c+'_1" onchange="triggerSave();syncCell(this)"></select>'
@@ -1464,6 +1505,42 @@ function buildTable(type){
     html+='</tr>';
   }
   document.getElementById('tb').innerHTML=html;
+}
+
+/* ── ZEILE EINFÜGEN ──────────────────────────────────────── */
+const MAX_ROWS=40;
+function addRowAt(afterRow){
+  savePlanDOM(); // aktuelle Eingaben sichern, bevor Zeilen verschoben werden
+  const plan=S.plans.find(p=>p.id===S.currentPlanId);
+  if(!plan)return;
+  const oldRows=plan.rows||15;
+  if(oldRows>=MAX_ROWS){toast('⚠️ Maximal '+MAX_ROWS+' Zeilen erreicht','warn');return;}
+  const newRows=oldRows+1;
+  const dayCount=plan.type==='weekend'?2:5;
+
+  // Zeilen ab "afterRow+1" nach unten verschieben (absteigend, um Daten nicht zu überschreiben)
+  for(let r=oldRows;r>afterRow;r--){
+    for(let c=0;c<dayCount;c++){
+      const kOld='k_'+r+'_'+c,kNew='k_'+(r+1)+'_'+c;
+      if(plan.cells[kOld]!==undefined){plan.cells[kNew]=plan.cells[kOld];delete plan.cells[kOld];}
+      ['_1','_2','_3'].forEach(suf=>{
+        const lOld='l_'+r+'_'+c+suf,lNew='l_'+(r+1)+'_'+c+suf;
+        if(plan.cells[lOld]!==undefined){plan.cells[lNew]=plan.cells[lOld];delete plan.cells[lOld];}
+      });
+    }
+  }
+  // Neue (leere) Zeile an Position afterRow+1
+  const newIdx=afterRow+1;
+  for(let c=0;c<dayCount;c++){
+    delete plan.cells['k_'+newIdx+'_'+c];
+    ['_1','_2','_3'].forEach(suf=>delete plan.cells['l_'+newIdx+'_'+c+suf]);
+  }
+  plan.rows=newRows;
+  buildTable(plan.type,newRows);
+  refreshDropdowns();
+  loadPlanDOM(plan.id);
+  triggerSave();
+  toast('➕ Zeile eingefügt');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1523,6 +1600,7 @@ function renderPlanCanvasA4(plan){
   const headBg=isWE?['#fffbeb','#fff1f2']:['#eff6ff','#ecfdf5','#f5f3ff','#fffbeb','#fdf2f8'];
   const cells=plan.cells||{};
   const dayCount=days.length;
+  const rowCount=plan.rows||15; // Aktuelle Zeilenzahl des Plans — Druck skaliert immer passend dazu
 
   // Feste A4-Seite (immer gleiche Pixelgröße, unabhängig vom Inhalt)
   const W=A4_PX_W,H=A4_PX_H;
@@ -1539,9 +1617,10 @@ function renderPlanCanvasA4(plan){
   // Basis-Maße (ungeskaliert) für die Inhaltsberechnung
   const base={numColW:40,colW:220,rowH:46,headH:34,titleH:46};
   const contentW0=base.numColW+base.colW*dayCount;
-  const contentH0=base.titleH+base.headH+base.rowH*15;
+  const contentH0=base.titleH+base.headH+base.rowH*rowCount;
 
-  // Auto-Skalierung: passt IMMER vollständig auf die A4-Seite
+  // Auto-Skalierung: passt IMMER vollständig auf die A4-Seite —
+  // unabhängig davon wie viele Zeilen der Plan inzwischen hat
   // (begrenzt durch Breite UND Höhe — garantiert eine einzige Seite)
   const fit=Math.min(availW/contentW0,availH/contentH0);
 
@@ -1574,7 +1653,7 @@ function renderPlanCanvasA4(plan){
   ctx.textAlign='left';
   y+=headH;
 
-  for(let r=1;r<=15;r++){
+  for(let r=1;r<=rowCount;r++){
     ctx.strokeStyle='#ccc';
     ctx.strokeRect(ox,y,numColW,rowH);
     ctx.fillStyle='#999';ctx.textAlign='center';
@@ -1704,7 +1783,6 @@ function applyOrientation(){
   Guardian.boot();
   ensurePlans();
   buildTable('week');
-  init3D();
   initLockScreen();
   window.addEventListener('resize',applyOrientation);
   window.addEventListener('orientationchange',()=>setTimeout(applyOrientation,80));
