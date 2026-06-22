@@ -174,14 +174,26 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .sb-plan.on .sb-dot.week{background:var(--blue)}
 .sb-plan.on .sb-dot.weekend{background:var(--green)}
 .sb-plan-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
-.sb-plan-del{
-  opacity:0;background:none;border:none;color:var(--txt3);cursor:pointer;
+.sb-kebab{
+  opacity:.5;background:none;border:none;color:var(--txt3);cursor:pointer;
   font-size:14px;width:18px;height:18px;border-radius:4px;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
   transition:all .15s;padding:0;
 }
-.sb-plan:hover .sb-plan-del{opacity:.6}
-.sb-plan-del:hover{opacity:1!important;background:rgba(220,38,38,.1);color:var(--red)}
+.sb-plan:hover .sb-kebab{opacity:.85}
+.sb-kebab:hover{opacity:1!important;background:rgba(0,0,0,.08);color:var(--txt)}
+.plan-menu{
+  display:none;background:#fff;border:1px solid var(--bdr);border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.14);margin:1px 6px 6px 6px;overflow:hidden;
+}
+.plan-menu.show{display:block;animation:floatIn .15s ease}
+.plan-menu button{
+  display:block;width:100%;text-align:left;padding:7px 10px;background:none;
+  border:none;font-size:11px;color:var(--txt);cursor:pointer;
+}
+.plan-menu button:hover{background:rgba(0,0,0,.05)}
+.plan-menu button.danger{color:#dc2626}
+.plan-menu button.danger:hover{background:rgba(220,38,38,.08)}
 .sb-add{
   margin:4px 8px;padding:7px 10px;border-radius:var(--rx);border:1.5px dashed rgba(37,99,235,.3);
   background:rgba(37,99,235,.04);color:var(--blue);cursor:pointer;font-size:11.5px;font-weight:600;
@@ -255,6 +267,9 @@ thead th:nth-child(5){background:#fffbeb;color:#d97706;border-color:#fcd34d}
 thead th:nth-child(6){background:#fdf2f8;color:#db2777;border-color:#f9a8d4}
 .we-table thead th:nth-child(2){background:#fffbeb;color:#d97706;border-color:#fcd34d}
 .we-table thead th:nth-child(3){background:#fff1f2;color:#e11d48;border-color:#fda4af}
+/* Spätdienst-Plan (Mo-So, 7 Tage): Sa/So zusätzlich zu den 5 Standard-Wochentagsfarben */
+.full-table thead th:nth-child(7){background:#ecfeff;color:#0e7490;border-color:#67e8f9}
+.full-table thead th:nth-child(8){background:#fff1f2;color:#9f1239;border-color:#fda4af}
 tbody td:first-child{vertical-align:middle;padding:0}
 .rownum{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:100%}
 .rn{font-size:10px;font-weight:700;color:var(--txt3)}
@@ -280,6 +295,10 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 .we-table td:nth-child(3) .cc:hover{border-color:rgba(225,29,72,.4);box-shadow:0 4px 16px rgba(225,29,72,.14)}
 .we-table td:nth-child(2) .cc.filled{border-color:rgba(217,119,6,.22);background:#fffbeb}
 .we-table td:nth-child(3) .cc.filled{border-color:rgba(225,29,72,.22);background:#fff1f2}
+.full-table td:nth-child(7) .cc:hover{border-color:rgba(14,116,144,.4);box-shadow:0 4px 16px rgba(14,116,144,.14)}
+.full-table td:nth-child(8) .cc:hover{border-color:rgba(159,18,57,.4);box-shadow:0 4px 16px rgba(159,18,57,.14)}
+.full-table td:nth-child(7) .cc.filled{border-color:rgba(14,116,144,.22);background:#ecfeff}
+.full-table td:nth-child(8) .cc.filled{border-color:rgba(159,18,57,.22);background:#fff1f2}
 .ctop{display:flex;justify-content:flex-end;align-items:center;gap:3px;height:14px}
 .addr{background:none;border:none;color:var(--green);cursor:pointer;font-size:13px;font-weight:700;padding:0 3px;line-height:1;border-radius:3px;transition:color .15s,background .15s}
 .addr:hover{background:rgba(5,150,105,.1);color:#047857}
@@ -310,6 +329,12 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 @keyframes si{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
 .lr:hover{background:#f1f5f9}
 .lrl{display:flex;align-items:center;gap:8px}
+.ktag{width:11px;height:11px;border-radius:50%;flex-shrink:0;cursor:pointer;border:1px solid rgba(0,0,0,.15);transition:transform .15s}
+.ktag:hover{transform:scale(1.25)}
+.klient-nm{cursor:pointer}
+.klient-nm:hover{text-decoration:underline;color:var(--blue)}
+.appt-row{padding:8px 10px;background:#f8fafc;border:1px solid rgba(0,0,0,.07);border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--txt)}
+.appt-leist{font-size:11px;color:var(--purple);display:block;margin-top:2px}
 .ldotk{width:6px;height:6px;border-radius:50%;background:var(--cyan);flex-shrink:0}
 .ldotl{width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0}
 .lract{display:flex;align-items:center;gap:3px;flex-shrink:0}
@@ -389,6 +414,8 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
 .choice-btn.week:hover{background:#dbeafe;border-color:#2563eb}
 .choice-btn.we{background:#ecfdf5;border-color:#6ee7b7;color:#065f46}
 .choice-btn.we:hover{background:#d1fae5;border-color:#059669}
+.choice-btn.full{background:#eef2ff;border-color:#a5b4fc;color:#3730a3}
+.choice-btn.full:hover{background:#e0e7ff;border-color:#6366f1}
 .choice-ico{font-size:22px}
 .choice-txt{text-align:left}
 .choice-ttl{font-size:13.5px;font-weight:700}
@@ -456,6 +483,7 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
   thead th{background:#f5f5f5!important;color:#333!important;border:1px solid #ccc!important;font-size:8pt!important}
   thead th:nth-child(2){color:#1e40af!important}thead th:nth-child(3){color:#166534!important}thead th:nth-child(4){color:#4c1d95!important}thead th:nth-child(5){color:#92400e!important}thead th:nth-child(6){color:#9d174d!important}
   .we-table thead th:nth-child(2){color:#92400e!important}.we-table thead th:nth-child(3){color:#9f1239!important}
+  .full-table thead th:nth-child(7){color:#0e7490!important}.full-table thead th:nth-child(8){color:#9f1239!important}
   tbody td:first-child{color:#999!important;font-size:8pt!important;vertical-align:top!important}
 }
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -504,6 +532,7 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
           <button class="sb-btn" id="btnViewPlan" onclick="showView('viewPlan',this)"><span class="sb-btn-ico">📅</span>Aktiver Plan</button>
           <button class="sb-btn" id="btnViewK" onclick="showView('viewKlienten',this)"><span class="sb-btn-ico">👥</span>Klienten</button>
           <button class="sb-btn" id="btnViewL" onclick="showView('viewLeistungen',this)"><span class="sb-btn-ico">📦</span>Leistungen</button>
+          <button class="sb-btn" onclick="generateAllPlansPDF()"><span class="sb-btn-ico">📚</span>Alle Touren drucken</button>
           <button class="sb-btn" onclick="forceUpdate()"><span class="sb-btn-ico">🔄</span>Nach Update suchen</button>
           <button class="sb-btn lock-btn" onclick="lockApp()"><span class="sb-btn-ico">🔒</span>Sperren</button>
         </div>
@@ -552,6 +581,7 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
             <input type="text" class="ti" id="ki" placeholder="Vor- und Nachname …" onkeydown="if(event.key==='Enter')addItem('klienten','ki')">
             <button class="btn btnp" onclick="addItem('klienten','ki')">+ Hinzufügen</button>
           </div>
+          <input type="text" class="ti" id="kSearch" placeholder="🔍 Klient suchen …" oninput="renderLists()" style="margin-top:10px;width:100%">
           <div class="lc" id="list-klienten"></div>
         </div>
       </div>
@@ -592,6 +622,13 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
         <div class="choice-txt">
           <div class="choice-ttl">Wochenendplan</div>
           <div class="choice-desc">Samstag · Sonntag</div>
+        </div>
+      </button>
+      <button class="choice-btn full" onclick="createPlan('full')">
+        <span class="choice-ico">🌙</span>
+        <div class="choice-txt">
+          <div class="choice-ttl">Spätdienst (Mo–So)</div>
+          <div class="choice-desc">Mo · Di · Mi · Do · Fr · Sa · So</div>
         </div>
       </button>
     </div>
@@ -656,6 +693,17 @@ td:nth-child(6) .cc.filled{border-color:rgba(219,39,119,.22);background:#fdf2f8}
   </div>
 </div>
 
+<!-- MODAL: Termine eines Klienten (über alle Pläne) -->
+<div class="modal-wrap" id="apptModal">
+  <div class="modal-overlay" onclick="closeApptModal()"></div>
+  <div class="modal-card" style="max-width:340px;text-align:left">
+    <div class="modal-title" id="apptModalTitle" style="text-align:center">Klient</div>
+    <div class="modal-sub" style="text-align:center">Alle Termine in allen Plänen</div>
+    <div id="apptModalBody" style="max-height:320px;overflow-y:auto;margin:10px 0;-webkit-overflow-scrolling:touch"></div>
+    <button class="bio-no" onclick="closeApptModal()" style="width:100%">Schließen</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- Print button — fixed top-right, always accessible -->
@@ -673,7 +721,7 @@ function h(s){const d=document.createElement('div');d.textContent=String(s);retu
 function a(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* ── DATA GUARDIAN ──────────────────────────────────────── */
-const APP_VERSION='4.0.0'; // ← Bei jeder neuen Version erhöhen!
+const APP_VERSION='4.2.0'; // ← Bei jeder neuen Version erhöhen!
 
 /* ══════════════════════════════════════════════════════════
    AUTO-UPDATE SYSTEM
@@ -1007,12 +1055,16 @@ function loadPlanDOM(planId){
     var el=document.querySelector('[data-n="'+CSS.escape(entry[0])+'"]');
     if(el){el.value=entry[1];syncCell(el);}
   });
-  const def=PLAN_DEFS_MAP[p.type]||{badge:'📅 Wochenplan'};
+  const def=PLAN_DEFS_MAP[p.type]||PLAN_DEFS_MAP.week;
   const badge=document.getElementById('planTypeBadge');
-  if(badge)badge.textContent=p.type==='weekend'?'🏖 Wochenendplan':'📅 Wochenplan';
+  if(badge)badge.textContent=def.badge;
 }
 
-const PLAN_DEFS_MAP={week:{badge:'📅 Wochenplan'},weekend:{badge:'🏖 Wochenendplan'}};
+const PLAN_DEFS_MAP={
+  week:{badge:'📅 Wochenplan'},
+  weekend:{badge:'🏖 Wochenendplan'},
+  full:{badge:'🌙 Spätdienst (Mo–So)'}
+};
 
 /* ── PLAN OPERATIONS ────────────────────────────────────── */
 function switchPlan(planId){
@@ -1035,7 +1087,7 @@ function switchPlan(planId){
 function createPlan(type){
   savePlanDOM();
   const count=S.plans.filter(p=>p.type===type).length+1;
-  const name=type==='weekend'?'WE '+count:'Woche '+count;
+  const name=type==='weekend'?'WE '+count:type==='full'?'Spät '+count:'Woche '+count;
   const np={id:genId(),name,type,rows:15,cells:{}};
   S.plans.push(np);
   S.currentPlanId=np.id;
@@ -1085,11 +1137,62 @@ function renderSidebar(){
 
 function planTab(p){
   var on=p.id===S.currentPlanId;
-  return '<div class="sb-plan'+(on?' on':'')+(p.type==='weekend'?' we':'')+'" onclick="switchPlan(\''+p.id+'\')" ondblclick="renamePlan(\''+p.id+'\',event)">'
+  return '<div class="sb-plan'+(on?' on':'')+(p.type==='weekend'?' we':'')+'" onclick="switchPlan(\''+p.id+'\')">'
     +'<span class="sb-dot '+p.type+'"></span>'
     +'<span class="sb-plan-nm">'+h(p.name)+'</span>'
-    +'<button class="sb-plan-del" onclick="deletePlan(\''+p.id+'\',event)" title="Löschen">×</button>'
+    +'<button class="sb-kebab" onclick="togglePlanMenu(event,\''+p.id+'\')" title="Optionen">⋮</button>'
+    +'</div>'
+    +'<div class="plan-menu" id="pm-'+p.id+'">'
+    +'<button onclick="event.stopPropagation();renamePlan(\''+p.id+'\',event);closeAllPlanMenus()">✏️ Umbenennen</button>'
+    +'<button onclick="event.stopPropagation();duplicatePlan(\''+p.id+'\');closeAllPlanMenus()">⧉ Duplizieren</button>'
+    +'<button onclick="event.stopPropagation();movePlanOrder(\''+p.id+'\',-1);closeAllPlanMenus()">▲ Nach oben</button>'
+    +'<button onclick="event.stopPropagation();movePlanOrder(\''+p.id+'\',1);closeAllPlanMenus()">▼ Nach unten</button>'
+    +'<button class="danger" onclick="event.stopPropagation();deletePlan(\''+p.id+'\',event);closeAllPlanMenus()">🗑 Löschen</button>'
     +'</div>';
+}
+
+function togglePlanMenu(e,id){
+  e.stopPropagation();
+  const el=document.getElementById('pm-'+id);
+  if(!el)return;
+  const wasOpen=el.classList.contains('show');
+  closeAllPlanMenus();
+  if(!wasOpen)el.classList.add('show');
+}
+function closeAllPlanMenus(){
+  document.querySelectorAll('.plan-menu').forEach(m=>m.classList.remove('show'));
+}
+document.addEventListener('click',closeAllPlanMenus);
+
+function duplicatePlan(planId){
+  const p=S.plans.find(pp=>pp.id===planId);
+  if(!p)return;
+  savePlanDOM();
+  const copy=JSON.parse(JSON.stringify(p));
+  copy.id=genId();
+  copy.name=p.name+' (Kopie)';
+  const idx=S.plans.findIndex(pp=>pp.id===planId);
+  S.plans.splice(idx+1,0,copy);
+  S.currentPlanId=copy.id;
+  buildTable(copy.type,copy.rows||15);
+  refreshDropdowns();
+  loadPlanDOM(copy.id);
+  renderSidebar();
+  showView('viewPlan',document.getElementById('btnViewPlan'));
+  triggerSave();
+  toast('⧉ Plan dupliziert');
+}
+
+function movePlanOrder(planId,dir){
+  const idx=S.plans.findIndex(p=>p.id===planId);
+  if(idx<0)return;
+  const target=idx+dir;
+  if(target<0||target>=S.plans.length)return;
+  const tmp=S.plans[idx];
+  S.plans[idx]=S.plans[target];
+  S.plans[target]=tmp;
+  renderSidebar();
+  triggerSave();
 }
 
 /* ── LOCK / UNLOCK ──────────────────────────────────────── */
@@ -1387,17 +1490,65 @@ function editKlient(idx){
   triggerSave();
   toast('✏️ Klient aktualisiert');
 }
+/* Farbpalette für Klienten-Tags (z.B. Pflegegrad-Kennzeichnung) — Tap zum Durchschalten */
+const KTAG_COLORS=['#cbd5e1','#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'];
+
+function cycleKlientTag(i){
+  const name=S.klienten[i];if(!name)return;
+  if(!S.klientTags)S.klientTags={};
+  const cur=S.klientTags[name]||0;
+  S.klientTags[name]=(cur+1)%KTAG_COLORS.length;
+  renderLists();
+  triggerSave();
+}
+
+function showKlientAppointments(i){
+  const name=S.klienten[i];if(!name)return;
+  const results=[];
+  S.plans.forEach(p=>{
+    const days=daysForType(p.type);
+    const cells=p.cells||{};
+    const rows=p.rows||15;
+    for(let r=1;r<=rows;r++){
+      for(let c=0;c<days.length;c++){
+        if(cells['k_'+r+'_'+c]===name){
+          const l1=cells['l_'+r+'_'+c+'_1']||'';
+          const l2=cells['l_'+r+'_'+c+'_2']||'';
+          const l3=cells['l_'+r+'_'+c+'_3']||'';
+          results.push({plan:p.name,day:days[c],row:r,leist:[l1,l2,l3].filter(Boolean).join(' · ')});
+        }
+      }
+    }
+  });
+  const body=document.getElementById('apptModalBody');
+  body.innerHTML=results.length
+    ?results.map(r=>'<div class="appt-row"><b>'+h(r.plan)+'</b> · '+h(r.day)+' · Zeile '+r.row
+        +(r.leist?'<span class="appt-leist">'+h(r.leist)+'</span>':'')+'</div>').join('')
+    :'<div class="empty">Keine Termine gefunden.</div>';
+  document.getElementById('apptModalTitle').textContent=name;
+  document.getElementById('apptModal').classList.add('show');
+}
+function closeApptModal(){document.getElementById('apptModal').classList.remove('show');}
+
 function renderLists(){
+  const searchEl=document.getElementById('kSearch');
+  const q=(searchEl?searchEl.value:'').trim().toLowerCase();
   const items=S.klienten||[];
   const elK=document.getElementById('list-klienten');
   if(elK){
-    elK.innerHTML=items.length
-      ?items.map((it,i)=>'<div class="lr"><div class="lrl"><span class="ldotk"></span>'+h(it)+'</div>'
-        +'<div class="lract">'
-        +'<button class="eb" onclick="editKlient('+i+')" title="Bearbeiten">✎</button>'
-        +'<button class="db" onclick="delItem(\'klienten\','+i+')" title="Löschen">×</button>'
-        +'</div></div>').join('')
-      :'<div class="empty">Noch keine Einträge.</div>';
+    const pairs=items.map((name,i)=>({name,i})).filter(o=>!q||o.name.toLowerCase().includes(q));
+    elK.innerHTML=pairs.length
+      ?pairs.map(o=>{
+        const tagIdx=(S.klientTags&&S.klientTags[o.name])||0;
+        return '<div class="lr"><div class="lrl">'
+          +'<span class="ktag" style="background:'+KTAG_COLORS[tagIdx]+'" onclick="event.stopPropagation();cycleKlientTag('+o.i+')" title="Farbe ändern"></span>'
+          +'<span class="klient-nm" onclick="showKlientAppointments('+o.i+')" title="Termine anzeigen">'+h(o.name)+'</span>'
+          +'</div><div class="lract">'
+          +'<button class="eb" onclick="editKlient('+o.i+')" title="Bearbeiten">✎</button>'
+          +'<button class="db" onclick="delItem(\'klienten\','+o.i+')" title="Löschen">×</button>'
+          +'</div></div>';
+      }).join('')
+      :'<div class="empty">'+(q?'Keine Treffer.':'Noch keine Einträge.')+'</div>';
   }
   const le=S.leistungen||[];
   const elL=document.getElementById('list-leistungen');
@@ -1481,13 +1632,24 @@ function updateStats(){
   if(sw)sw.textContent=wk;if(sc)sc.textContent=cli;if(se)se.textContent=ent;
 }
 
+/* Liefert die Wochentage je Plantyp — zentral genutzt von Tabelle & Druck */
+function daysForType(type){
+  if(type==='weekend')return['Samstag','Sonntag'];
+  if(type==='full')return['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+  return['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
+}
+function tableClassForType(type){
+  if(type==='weekend')return'we-table';
+  if(type==='full')return'full-table';
+  return'';
+}
+
 /* ── TABLE BUILDER ──────────────────────────────────────── */
 function buildTable(type,rows){
   rows=rows||15;
-  const isWE=(type==='weekend');
-  const days=isWE?['Samstag','Sonntag']:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
+  const days=daysForType(type);
   const table=document.getElementById('planTable');
-  table.className=isWE?'we-table':'';
+  table.className=tableClassForType(type);
   document.getElementById('planCols').innerHTML='<col>'+days.map(()=>'<col>').join('');
   document.getElementById('planHead').innerHTML='<tr><th>#</th>'+days.map(d=>'<th>'+d+'</th>').join('')+'</tr>';
   let html='';
@@ -1520,7 +1682,7 @@ function addRowAt(afterRow){
   const oldRows=plan.rows||15;
   if(oldRows>=MAX_ROWS){toast('⚠️ Maximal '+MAX_ROWS+' Zeilen erreicht','warn');return;}
   const newRows=oldRows+1;
-  const dayCount=plan.type==='weekend'?2:5;
+  const dayCount=daysForType(plan.type).length;
 
   // Zeilen ab "afterRow+1" nach unten verschieben (absteigend, um Daten nicht zu überschreiben)
   for(let r=oldRows;r>afterRow;r--){
@@ -1556,7 +1718,7 @@ function deleteRowAt(r){
   if(!confirm('Zeile '+r+' löschen?\nVorhandene Einträge in dieser Zeile gehen verloren.'))return;
 
   savePlanDOM(); // aktuelle Eingaben sichern, bevor verschoben wird
-  const dayCount=plan.type==='weekend'?2:5;
+  const dayCount=daysForType(plan.type).length;
 
   // Zeile r entfernen
   for(let c=0;c<dayCount;c++){
@@ -1643,23 +1805,34 @@ async function generateAndSharePDF(){
 }
 
 /* ── Plan auf festes DIN-A4-Raster rendern (Auto-Fit) ───── */
-/* Touren, deren Name mit W (Wochenende) oder S (Spätdienst) beginnt,
-   werden im Hochformat gedruckt — alle anderen bleiben im Querformat. */
+/* Wochenend- und Spätdienst-Touren (Mo–So) werden im Hochformat gedruckt —
+   reguläre Wochenpläne (Mo–Fr) bleiben im Querformat. An den TYP gebunden,
+   nicht an den Namen — sonst würde z.B. "Woche 3" fälschlich als Hochformat
+   erkannt, weil das Wort mit "W" beginnt. */
 function isPortraitPlan(plan){
-  const n=(plan.name||'').trim();
-  return /^[ws]/i.test(n);
+  return plan.type==='weekend'||plan.type==='full';
 }
 
 function renderPlanCanvasA4(plan){
+  const days=daysForType(plan.type);
   const isWE=plan.type==='weekend';
-  const days=isWE?['Samstag','Sonntag']:['Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
-  const headColors=isWE?['#92400e','#9f1239']:['#1e40af','#166534','#4c1d95','#92400e','#9d174d'];
-  const headBg=isWE?['#fffbeb','#fff1f2']:['#eff6ff','#ecfdf5','#f5f3ff','#fffbeb','#fdf2f8'];
+  const isFull=plan.type==='full';
+  let headColors,headBg;
+  if(isWE){
+    headColors=['#92400e','#9f1239'];
+    headBg=['#fffbeb','#fff1f2'];
+  }else if(isFull){
+    headColors=['#1e40af','#166534','#4c1d95','#92400e','#9d174d','#0e7490','#9f1239'];
+    headBg=['#eff6ff','#ecfdf5','#f5f3ff','#fffbeb','#fdf2f8','#ecfeff','#fff1f2'];
+  }else{
+    headColors=['#1e40af','#166534','#4c1d95','#92400e','#9d174d'];
+    headBg=['#eff6ff','#ecfdf5','#f5f3ff','#fffbeb','#fdf2f8'];
+  }
   const cells=plan.cells||{};
   const dayCount=days.length;
   const rowCount=plan.rows||15; // Aktuelle Zeilenzahl des Plans — Druck skaliert immer passend dazu
 
-  // Seitenform: W/S-Touren → Hochformat, alle anderen → Querformat
+  // Seitenform: Wochenende/Spätdienst → Hochformat, reguläre Wochenpläne → Querformat
   const portrait=isPortraitPlan(plan);
   const W=portrait?A4_PX_H:A4_PX_W,H=portrait?A4_PX_W:A4_PX_H;
   const canvas=document.createElement('canvas');
@@ -1801,6 +1974,96 @@ function _buildA4PDF(jpegBytes,imgPxW,imgPxH,pageWpt,pageHpt,rotate){
   const buf=new Uint8Array(total);
   let p=0;for(const part of parts){buf.set(part,p);p+=part.length;}
   return new Blob([buf],{type:'application/pdf'});
+}
+
+/* ── MEHRSEITIGES PDF (alle Pläne in einer Datei) ───────── */
+function _buildMultiPagePDF(pages){
+  const enc=s=>new TextEncoder().encode(s);
+  const parts=[];let total=0;const off={};
+  const push=b=>{parts.push(b);total+=b.length;};
+  const pushStr=s=>push(enc(s));
+  pushStr('%PDF-1.4\n');
+
+  const n=pages.length;
+  const pageObjNums=[];
+  let nextObj=3;
+  for(let i=0;i<n;i++){pageObjNums.push(nextObj);nextObj+=3;} // Page,Image,Content je 3 Objekte
+  const totalObjs=nextObj-1;
+
+  off[1]=total;
+  pushStr('1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n');
+
+  off[2]=total;
+  const kids=pageObjNums.map(o=>o+' 0 R').join(' ');
+  pushStr('2 0 obj<< /Type /Pages /Kids ['+kids+'] /Count '+n+' >>endobj\n');
+
+  for(let i=0;i<n;i++){
+    const pg=pages[i];
+    const pageNum=pageObjNums[i],imgNum=pageNum+1,contentNum=pageNum+2;
+
+    off[pageNum]=total;
+    pushStr(pageNum+' 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pg.pageWpt+' '+pg.pageHpt+']'
+      +(pg.rotate?' /Rotate '+pg.rotate:'')
+      +' /Resources << /ProcSet [/PDF /ImageC] /XObject << /Im0 '+imgNum+' 0 R >> >> /Contents '+contentNum+' 0 R >>endobj\n');
+
+    off[imgNum]=total;
+    pushStr(imgNum+' 0 obj<< /Type /XObject /Subtype /Image /Width '+pg.imgPxW+' /Height '+pg.imgPxH+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+pg.jpegBytes.length+' >>\nstream\n');
+    push(pg.jpegBytes);
+    pushStr('\nendstream endobj\n');
+
+    off[contentNum]=total;
+    const content='q '+pg.pageWpt+' 0 0 '+pg.pageHpt+' 0 0 cm /Im0 Do Q';
+    const cBytes=enc(content);
+    pushStr(contentNum+' 0 obj<< /Length '+cBytes.length+' >>\nstream\n');
+    push(cBytes);
+    pushStr('\nendstream endobj\n');
+  }
+
+  const xrefOff=total;
+  let xref='xref\n0 '+(totalObjs+1)+'\n0000000000 65535 f \n';
+  for(let i=1;i<=totalObjs;i++)xref+=String(off[i]).padStart(10,'0')+' 00000 n \n';
+  pushStr(xref);
+  pushStr('trailer<< /Size '+(totalObjs+1)+' /Root 1 0 R >>\nstartxref\n'+xrefOff+'\n%%EOF');
+
+  const buf2=new Uint8Array(total);
+  let p2=0;for(const part of parts){buf2.set(part,p2);p2+=part.length;}
+  return new Blob([buf2],{type:'application/pdf'});
+}
+
+async function generateAllPlansPDF(){
+  if(!S.plans||S.plans.length===0){toast('⚠️ Keine Pläne vorhanden','warn');return;}
+  toast('📚 Erstelle Sammel-PDF …');
+  try{
+    savePlanDOM(); // aktuelle Eingaben sichern, bevor alle Pläne gelesen werden
+    const pages=[];
+    S.plans.forEach(plan=>{
+      const canvas=renderPlanCanvasA4(plan);
+      const dataUrl=canvas.toDataURL('image/jpeg',0.92);
+      const jpegBytes=_dataURLToBytes(dataUrl);
+      if(isPortraitPlan(plan)){
+        pages.push({jpegBytes,imgPxW:canvas.width,imgPxH:canvas.height,pageWpt:A4_PT_H,pageHpt:A4_PT_W,rotate:0});
+      }else{
+        pages.push({jpegBytes,imgPxW:canvas.width,imgPxH:canvas.height,pageWpt:A4_PT_W,pageHpt:A4_PT_H,rotate:90});
+      }
+    });
+    const pdfBlob=_buildMultiPagePDF(pages);
+    const fname='Alle_Touren_'+new Date().toISOString().slice(0,10)+'.pdf';
+    const file=new File([pdfBlob],fname,{type:'application/pdf'});
+
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:'Alle Touren'});}
+      catch(e){if(e.name!=='AbortError')toast('Teilen abgebrochen','warn');}
+    }else{
+      const url=URL.createObjectURL(pdfBlob);
+      const a=document.createElement('a');
+      a.href=url;a.download=fname;
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
+      toast('💾 Sammel-PDF gespeichert ('+pages.length+' Seiten)');
+    }
+  }catch(e){
+    toast('❌ Fehler: '+e.message,'err');
+  }
 }
 
 /* ── ORIENTATION (phones only, not tablets/desktop) ─────── */
